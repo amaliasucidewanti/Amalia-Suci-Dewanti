@@ -80,7 +80,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
           name: row[1] || 'Pegawai',
           position: row[2] || '-',
           unit: row[3] || '-',
-          status: EmployeeStatus.UNASSIGNED, // Default Unassigned
+          status: EmployeeStatus.UNASSIGNED, // Default Standby
           disciplineScore: { attendance: 0, assembly: 0, dailyLog: 0, report: 0, final: 0 }
         });
       });
@@ -119,14 +119,17 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
 
         const start = parseDateSafely(String(row[5]));
         const end = parseDateSafely(String(row[6]));
+        const activityName = row[3] || '-'; // Nama Kegiatan
         
-        // Logika Status: Pegawai berstatus ASSIGNED jika hari ini berada di dalam rentang tugas
+        // Logika Status Otomatis: Pegawai Bertugas jika hari ini berada dalam rentang tanggal tugas
         const emp = employeesMap.get(nip);
         if (emp && start && end) {
           const startTime = new Date(start).setHours(0,0,0,0);
           const endTime = new Date(end).setHours(23,59,59,999);
           if (today.getTime() >= startTime && today.getTime() <= endTime) {
             emp.status = EmployeeStatus.ASSIGNED;
+            // Menyimpan info kegiatan aktif pada objek pegawai untuk tampilan status
+            (emp as any).activeActivity = activityName;
           }
         }
 
@@ -145,7 +148,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
             id: `task-${letterNum}`,
             letterNumber: letterNum,
             basis: row[2] || '-',
-            description: row[3] || '-', // Nama Kegiatan
+            description: activityName,
             location: row[4] || '-',
             startDate: String(row[5]),
             endDate: String(row[6]),

@@ -7,7 +7,8 @@ import {
   CheckCircle, 
   TrendingUp,
   ArrowRight,
-  ClipboardCheck
+  ClipboardCheck,
+  Briefcase
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -39,10 +40,6 @@ interface DashboardPageProps {
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], currentUser, onNavigate }) => {
   const isAdmin = currentUser?.nip === 'Admin';
-  const [filter] = useState({ 
-    unit: 'Semua Unit',
-    search: ''
-  });
 
   const pendingReports = useMemo(() => {
     if (isAdmin) return [];
@@ -52,29 +49,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
     );
   }, [tasks, currentUser, isAdmin]);
 
-  const filteredEmployees = useMemo(() => {
-    return employees.filter(emp => {
-      const matchUnit = filter.unit === 'Semua Unit' || emp.unit === filter.unit;
-      const matchSearch = emp.name.toLowerCase().includes(filter.search.toLowerCase()) || 
-                          emp.nip.includes(filter.search);
-      return matchUnit && matchSearch;
-    });
-  }, [employees, filter.unit, filter.search]);
-
   const dynamicStats = useMemo(() => {
-    const total = filteredEmployees.length;
+    const total = employees.length;
     if (total === 0) return { assigned: 0, unassigned: 0, activeSurat: 0, avgDiscipline: 0 };
     
-    const assigned = filteredEmployees.filter(e => e.status === EmployeeStatus.ASSIGNED).length;
-    const unassigned = filteredEmployees.filter(e => e.status === EmployeeStatus.UNASSIGNED).length;
-    const avgDiscipline = filteredEmployees.reduce((acc, curr) => acc + curr.disciplineScore.final, 0) / total;
+    const assigned = employees.filter(e => e.status === EmployeeStatus.ASSIGNED).length;
+    const unassigned = employees.filter(e => e.status === EmployeeStatus.UNASSIGNED).length;
+    const avgDiscipline = employees.reduce((acc, curr) => acc + (curr.disciplineScore?.final || 0), 0) / total;
     
     const activeSurat = isAdmin 
       ? tasks.length 
       : tasks.filter(t => t.employees.some(e => e.nip === currentUser?.nip)).length;
     
     return { assigned, unassigned, activeSurat, avgDiscipline };
-  }, [filteredEmployees, tasks, isAdmin, currentUser]);
+  }, [employees, tasks, isAdmin, currentUser]);
 
   const StatCard = ({ icon: Icon, label, value, color, bgColor }: any) => (
     <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
@@ -87,10 +75,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
           <Icon size={28} />
         </div>
       </div>
-      <div className="mt-6 flex items-center text-[9px] uppercase tracking-[0.2em] font-black text-slate-400">
-        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 animate-pulse"></div>
-        <span>Data Terverifikasi</span>
-      </div>
     </div>
   );
 
@@ -102,14 +86,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
             <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center backdrop-blur-xl border border-white/30">
               <ClipboardCheck size={40} />
             </div>
-            <div>
-              <h4 className="text-2xl font-black uppercase tracking-tighter">Laporan Tugas Tertunda</h4>
-              <p className="text-rose-100 text-sm mt-2 font-medium">Anda sedang bertugas pada kegiatan penting. Segera unggah laporan pelaksanaan tugas Anda.</p>
+            <div className="flex-1">
+              <h4 className="text-2xl font-black uppercase tracking-tighter">Laporan Tugas Perlu Diisi</h4>
+              <div className="mt-2 space-y-1">
+                {pendingReports.map(t => (
+                  <p key={t.id} className="text-rose-100 text-sm font-medium flex items-center gap-2">
+                    <Briefcase size={14} /> Bertugas pada kegiatan: <span className="font-bold underline">{t.description}</span>
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
           <button 
             onClick={() => onNavigate && onNavigate('reports')}
-            className="bg-white text-rose-600 px-10 py-5 rounded-[24px] font-black text-sm uppercase tracking-widest flex items-center gap-4 hover:bg-rose-50 transition-all shadow-xl active:scale-95 shrink-0"
+            className="bg-white text-rose-600 px-10 py-5 rounded-[24px] font-black text-sm uppercase tracking-widest flex items-center gap-4 hover:bg-rose-50 transition-all shadow-xl"
           >
             Lapor Sekarang
             <ArrowRight size={20} />
@@ -126,24 +116,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-10">
-            <h4 className="text-slate-800 font-black flex items-center gap-4 uppercase tracking-tighter text-xl">
-              <TrendingUp className="text-blue-600" size={24} />
-              Statistik Kinerja BPMP 2026
-            </h4>
-          </div>
+          <h4 className="text-slate-800 font-black mb-10 uppercase tracking-tighter text-xl">Statistik Operasional BPMP</h4>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={MOCK_CHART_DATA}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 'bold'}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 'bold'}} />
-                <Tooltip 
-                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', padding: '20px'}} 
-                  cursor={{fill: '#f8fafc'}}
-                />
-                <Bar dataKey="bertugas" name="Bertugas" fill="#e11d48" radius={[8, 8, 0, 0]} barSize={45} />
-                <Bar dataKey="tidak" name="Standby" fill="#10b981" radius={[8, 8, 0, 0]} barSize={45} />
+                <Tooltip contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)'}} />
+                <Bar dataKey="bertugas" name="Bertugas" fill="#e11d48" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="tidak" name="Standby" fill="#10b981" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -156,8 +138,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
               <PieChart>
                 <Pie
                   data={[
-                    { name: 'Bertugas', value: dynamicStats.assigned, fill: '#e11d48' },
-                    { name: 'Standby', value: dynamicStats.unassigned, fill: '#10b981' }
+                    { name: 'Bertugas', value: dynamicStats.assigned },
+                    { name: 'Standby', value: dynamicStats.unassigned }
                   ]}
                   innerRadius={80}
                   outerRadius={110}
@@ -170,10 +152,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</span>
-              <span className="text-4xl font-black text-slate-800 tracking-tighter">{employees.length}</span>
-            </div>
           </div>
           <div className="w-full space-y-4 mt-10">
              <div className="flex items-center justify-between p-4 bg-rose-50 rounded-2xl border border-rose-100">

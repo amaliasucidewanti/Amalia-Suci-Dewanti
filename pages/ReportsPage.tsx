@@ -242,7 +242,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks, currentUser, onUpdateT
               <p className="ml-6">Demikian laporan tentang {task.description} ini disusun untuk dipergunakan sebagaimana mestinya.</p>
             </section>
 
-            {/* Foto Dokumentasi - Hanya Tampil di Layar, Tidak Print (Optional sesuai keinginan user) */}
+            {/* Foto Dokumentasi */}
             {task.documentationPhotos && task.documentationPhotos.length > 0 && (
               <section className="space-y-4 pt-10 no-print">
                 <h3 className="font-bold uppercase text-[10px] tracking-widest text-blue-700">Lampiran Dokumentasi</h3>
