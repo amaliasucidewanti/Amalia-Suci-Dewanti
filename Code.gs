@@ -2,10 +2,10 @@
 /**
  * SI-KERTAS (Sistem Kerja Tuntas) - Backend Logic
  * Platform: Google Apps Script
- * Author: Systems Analyst & Gov Dev
  */
 
 const SPREADSHEET_ID = '1iB7Tdda08wD1u5IwiKUEjkfI2JFzw4wjTI_bGRhivVc';
+const FOLDER_NAME = 'SI-KERTAS_DOKUMENTASI';
 
 function doGet() {
   return HtmlService.createTemplateFromFile('index')
@@ -16,7 +16,18 @@ function doGet() {
 }
 
 /**
- * Mendapatkan data dari seluruh tab Spreadsheet
+ * Mengambil atau membuat folder untuk penyimpanan foto
+ */
+function getOrCreateFolder() {
+  const folders = DriveApp.getFoldersByName(FOLDER_NAME);
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  return DriveApp.createFolder(FOLDER_NAME);
+}
+
+/**
+ * Mengambil data mentah dari seluruh sheet
  */
 function getSpreadsheetData() {
   try {
@@ -35,46 +46,38 @@ function getSpreadsheetData() {
     
     return result;
   } catch (e) {
-    Logger.log("Error getSpreadsheetData: " + e.toString());
-    throw new Error("Sistem gagal menghubungi basis data: " + e.message);
+    throw new Error("Gagal mengambil data: " + e.message);
   }
 }
 
 /**
- * Menyimpan data Surat Tugas Baru
+ * Menyimpan Surat Tugas Baru
  */
 function saveAssignmentRecord(assignment) {
-  try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName('SURAT_TUGAS');
-    const lock = LockService.getScriptLock();
-    
-    // Tunggu akses sheet selama 30 detik jika sedang sibuk
-    lock.waitLock(30000);
-    
-    assignment.employees.forEach(emp => {
-      sheet.appendRow([
-        emp.nip,
-        assignment.letterNumber,
-        assignment.basis,
-        assignment.description,
-        assignment.location,
-        assignment.startDate,
-        assignment.endDate,
-        assignment.signee,
-        new Date() // Timestamp Server
-      ]);
-    });
-    
-    lock.releaseLock();
-    return { success: true };
-  } catch (e) {
-    throw new Error("Gagal menyimpan Surat Tugas: " + e.message);
-  }
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('SURAT_TUGAS');
+  const lock = LockService.getScriptLock();
+  
+  lock.waitLock(30000);
+  assignment.employees.forEach(emp => {
+    sheet.appendRow([
+      emp.nip,
+      assignment.letterNumber,
+      assignment.basis,
+      assignment.description,
+      assignment.location,
+      assignment.startDate,
+      assignment.endDate,
+      assignment.signee,
+      new Date()
+    ]);
+  });
+  lock.releaseLock();
+  return { success: true };
 }
 
 /**
- * Menyimpan Laporan Tugas & Menyesuaikan Skor Disiplin
+ * Menyimpan Laporan Tugas dan Foto ke Drive
  */
 function saveReportRecord(reportData) {
   try {
@@ -85,7 +88,21 @@ function saveReportRecord(reportData) {
     
     lock.waitLock(30000);
 
-    // 1. Bersihkan laporan lama jika ada
+    // 1. Simpan Foto ke Drive (jika ada)
+    let photoUrls = [];
+    if (reportData.documentationPhotos && reportData.documentationPhotos.length > 0) {
+      const folder = getOrCreateFolder();
+      reportData.documentationPhotos.forEach((base64, index) => {
+        const contentType = base64.split(';')[0].split(':')[1];
+        const bytes = Utilities.base64Decode(base64.split(',')[1]);
+        const blob = Utilities.newBlob(bytes, contentType, `ST_${reportData.letterNumber.replace(/\//g, '-')}_${reportData.nip}_${index + 1}`);
+        const file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        photoUrls.push(file.getUrl());
+      });
+    }
+
+    // 2. Hapus laporan lama jika ada
     const dataLaporan = sheetLaporan.getDataRange().getValues();
     for (let i = dataLaporan.length - 1; i >= 1; i--) {
       if (dataLaporan[i][0] == reportData.letterNumber && dataLaporan[i][3] == reportData.nip) {
@@ -93,72 +110,44 @@ function saveReportRecord(reportData) {
       }
     }
 
-    // 2. Simpan Laporan Baru
-    const photoCount = reportData.documentationPhotos ? reportData.documentationPhotos.length : 0;
+    // 3. Simpan baris laporan baru (Kolom 5 sekarang menyimpan URL foto sebagai JSON string)
     sheetLaporan.appendRow([
       reportData.letterNumber,
-      reportData.summary, 
+      reportData.summary,
       reportData.reportDate,
       reportData.nip,
-      `Lampiran: ${photoCount} Foto`
+      JSON.stringify(photoUrls)
     ]);
     
-    // 3. Update Poin Disiplin Pelaporan (+20 poin per laporan terbit)
+    // 4. Update Skor Disiplin Pelaporan
     const dataDisiplin = sheetDisiplin.getDataRange().getValues();
-    let found = false;
     for (let i = 1; i < dataDisiplin.length; i++) {
       if (dataDisiplin[i][0] == reportData.nip) {
-        const scorePelaporan = parseFloat(dataDisiplin[i][4]) || 0;
-        sheetDisiplin.getRange(i + 1, 5).setValue(Math.min(100, scorePelaporan + 20));
-        found = true;
+        const currentScore = parseFloat(dataDisiplin[i][4]) || 0;
+        sheetDisiplin.getRange(i + 1, 5).setValue(Math.min(100, currentScore + 20));
         break;
       }
-    }
-    
-    // Jika data disiplin belum ada, buat baru
-    if (!found) {
-      sheetDisiplin.appendRow([reportData.nip, 100, 100, 100, 20]);
     }
 
     lock.releaseLock();
     return { success: true };
   } catch (e) {
-    throw new Error("Gagal menyimpan laporan: " + e.message);
+    return { success: false, error: e.message };
   }
 }
 
 /**
- * Menghapus Laporan Tugas
+ * Menghapus Laporan
  */
 function deleteReportRecord(letterNumber, nip) {
-  try {
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName('LAPORAN_TUGAS');
-    const sheetDisiplin = ss.getSheetByName('DISIPLIN_PEGAWAI');
-    const data = sheet.getDataRange().getValues();
-    
-    const lock = LockService.getScriptLock();
-    lock.waitLock(30000);
-
-    for (let i = data.length - 1; i >= 1; i--) {
-      if (data[i][0] == letterNumber && data[i][3] == nip) {
-        sheet.deleteRow(i + 1);
-      }
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('LAPORAN_TUGAS');
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][0] == letterNumber && data[i][3] == nip) {
+      sheet.deleteRow(i + 1);
     }
-
-    // Kurangi skor jika laporan dihapus
-    const dataDisiplin = sheetDisiplin.getDataRange().getValues();
-    for (let i = 1; i < dataDisiplin.length; i++) {
-      if (dataDisiplin[i][0] == nip) {
-        const current = parseFloat(dataDisiplin[i][4]) || 0;
-        sheetDisiplin.getRange(i + 1, 5).setValue(Math.max(0, current - 20));
-        break;
-      }
-    }
-
-    lock.releaseLock();
-    return { success: true };
-  } catch (e) {
-    throw new Error("Gagal menghapus laporan: " + e.message);
   }
+  return { success: true };
 }

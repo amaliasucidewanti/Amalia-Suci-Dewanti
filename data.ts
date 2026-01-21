@@ -23,7 +23,7 @@ const parseCSV = (text: string) => {
       } else current += char;
     }
     cells.push(current.trim());
-    rows.push(cells.map(c => c.replace(/^"|"$/g, '').trim()));
+    rows.push(cells.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"').trim()));
   }
   return rows;
 };
@@ -32,7 +32,6 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
   try {
     let rawData: any;
 
-    // Deteksi jika berjalan di lingkungan Google Apps Script
     if (typeof google !== 'undefined' && google.script && google.script.run) {
       rawData = await new Promise((resolve, reject) => {
         google.script.run
@@ -41,7 +40,6 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
           .getSpreadsheetData();
       });
     } else {
-      // Fallback untuk local development
       const fetchSheet = async (name: string) => {
         const res = await fetch(`${BASE_URL}&sheet=${name}`, { cache: 'no-store' });
         return parseCSV(await res.text());
@@ -73,12 +71,26 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
       });
     }
 
-    const reportsMap = new Map<string, { summary: string, date: string, nip: string }>();
+    const reportsMap = new Map<string, { summary: string, date: string, nip: string, photos: string[] }>();
     const rawLaporan = rawData['LAPORAN_TUGAS'];
     if (rawLaporan && rawLaporan.length > 1) {
       rawLaporan.slice(1).forEach((row: any[]) => {
         const letterNum = row[0];
-        if (letterNum) reportsMap.set(letterNum, { summary: row[1], date: row[2], nip: row[3] });
+        if (letterNum) {
+          let photos = [];
+          try {
+            if (row[4] && row[4].startsWith('[')) {
+              photos = JSON.parse(row[4]);
+            }
+          } catch(e) {}
+          
+          reportsMap.set(letterNum, { 
+            summary: row[1], 
+            date: row[2], 
+            nip: row[3],
+            photos: photos
+          });
+        }
       });
     }
 
@@ -110,15 +122,16 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
             basis: row[2] || '-',
             description: row[3] || '-',
             location: row[4] || '-',
-            startDate: row[5] || '',
-            endDate: row[6] || '',
+            startDate: String(row[5]),
+            endDate: String(row[6]),
             signee: row[7] || '-',
             employees: emp ? [emp] : [],
             reportStatus: report ? ReportStatus.SUBMITTED : ReportStatus.PENDING,
             reportSummary: report?.summary || '',
             reportCreatorNip: report?.nip || '',
             reportDate: report?.date || '',
-            reportDetails: reportDetails
+            reportDetails: reportDetails,
+            documentationPhotos: report?.photos || []
           });
         }
       });

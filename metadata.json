@@ -1,5 +1,12 @@
 {
-  "name": "Copy of Si-Kertas (Sistem Kerja Tuntas)",
-  "description": "A professional government management system for tracking employee assignments, discipline, and task reporting with a clean, official interface.",
-  "requestFramePermissions": []
+  "name": "SI-KERTAS (Sistem Kerja Tuntas)",
+  "description": "Sistem manajemen penugasan pegawai pemerintah BPMP Maluku Utara yang terintegrasi dengan Google Sheets dan Drive.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/script.external_request"
+  ]
 }
