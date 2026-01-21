@@ -171,88 +171,78 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks, currentUser, onUpdateT
 
     return (
       <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto font-serif p-16 md:p-20 relative animate-in fade-in zoom-in duration-300">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto font-serif p-16 md:p-24 relative animate-in fade-in zoom-in duration-300">
           <button onClick={() => setShowPdfPreview(null)} className="absolute top-8 right-8 p-2 hover:bg-slate-100 rounded-full text-slate-400 font-sans transition-colors no-print">
             <X size={28} />
           </button>
           
-          <div className="flex flex-col items-center mb-10 pb-4 border-b-2 border-slate-900">
-            <img src={LOGO_URL} alt="Logo" className="w-16 h-16 object-contain mb-4" />
-            <h1 className="text-xl font-bold uppercase leading-tight text-center">LAPORAN PELAKSANAAN TUGAS</h1>
-            <p className="text-sm font-sans font-bold mt-1">BPMP PROVINSI MALUKU UTARA</p>
+          <div className="text-center mb-12">
+            <h1 className="text-lg font-bold uppercase tracking-widest leading-tight">LAPORAN TENTANG</h1>
+            <h2 className="text-lg font-bold uppercase tracking-tight mt-1">{task.description}</h2>
           </div>
 
           <div className="space-y-8 text-[14px] leading-relaxed text-slate-900">
-            <section className="space-y-2">
-              <h3 className="font-bold">I. Identitas Pegawai</h3>
-              <div className="grid grid-cols-4 gap-x-4 ml-4">
-                <span className="w-32">Nama</span>
-                <span className="col-span-3">: {pelapor.name}</span>
-                <span className="w-32">NIP</span>
-                <span className="col-span-3">: {pelapor.nip}</span>
-                <span className="w-32">Jabatan</span>
-                <span className="col-span-3">: {pelapor.position}</span>
-                <span className="w-32">Unit Kerja</span>
-                <span className="col-span-3">: {pelapor.unit}</span>
+            {/* A. Pendahuluan */}
+            <section className="space-y-4">
+              <h3 className="font-bold">A. Pendahuluan</h3>
+              <div className="ml-6 space-y-4">
+                <div className="space-y-1">
+                  <p className="font-bold">1. Latar Belakang</p>
+                  <p>Pelaksanaan kegiatan ini didasarkan pada kebutuhan untuk pencapaian indikator kinerja serta koordinasi teknis dalam rangka penjaminan mutu pendidikan di Provinsi Maluku Utara.</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-bold">2. Maksud dan Tujuan</p>
+                  <p>{task.description}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-bold">3. Ruang Lingkup</p>
+                  <p>Kegiatan dilaksanakan di {task.location} dengan melibatkan pihak terkait sesuai penugasan.</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-bold">4. Dasar</p>
+                  <p>{task.letterNumber}</p>
+                </div>
               </div>
             </section>
 
+            {/* B. Kegiatan yang Dilaksanakan */}
             <section className="space-y-2">
-              <h3 className="font-bold">II. Dasar Pelaksanaan</h3>
-              <p className="ml-4 italic text-xs text-slate-500">(Surat tugas / disposisi / perintah atasan)</p>
-              <div className="grid grid-cols-4 gap-x-4 ml-4">
-                <span className="w-32">Nomor</span>
-                <span className="col-span-3">: {task.letterNumber}</span>
-                <span className="w-32">Tanggal</span>
-                <span className="col-span-3">: {task.startDate}</span>
-                <span className="w-32">Pejabat pemberi tugas</span>
-                <span className="col-span-3">: {task.signee}</span>
-              </div>
-            </section>
-
-            <section className="space-y-2">
-              <h3 className="font-bold">III. Waktu dan Tempat</h3>
-              <div className="grid grid-cols-4 gap-x-4 ml-4">
-                <span className="w-32">Hari/Tanggal</span>
-                <span className="col-span-3">: {task.startDate} s.d {task.endDate}</span>
-                <span className="w-32">Waktu</span>
-                <span className="col-span-3">: Jam Kerja / Sesuai Agenda</span>
-                <span className="w-32">Tempat</span>
-                <span className="col-span-3">: {task.location}</span>
-              </div>
-            </section>
-
-            <section className="space-y-2">
-              <h3 className="font-bold">IV. Uraian Pelaksanaan Tugas</h3>
-              <p className="ml-4 italic text-xs text-slate-500">(Jelaskan singkat, poin-poin saja)</p>
-              <div className="ml-4 whitespace-pre-wrap leading-relaxed">
+              <h3 className="font-bold">B. Kegiatan yang Dilaksanakan</h3>
+              <div className="ml-6 whitespace-pre-wrap">
                 {details?.uraian || "-"}
               </div>
             </section>
 
+            {/* C. Hasil yang Dicapai */}
             <section className="space-y-2">
-              <h3 className="font-bold">V. Hasil yang Dicapai</h3>
-              <p className="ml-4 italic text-xs text-slate-500">(Hasil konkret, output kegiatan)</p>
-              <div className="ml-4 whitespace-pre-wrap leading-relaxed">
+              <h3 className="font-bold">C. Hasil yang Dicapai</h3>
+              <div className="ml-6 whitespace-pre-wrap">
                 {details?.hasil || "-"}
               </div>
             </section>
 
+            {/* D. Simpulan dan Saran */}
             <section className="space-y-2">
-              <h3 className="font-bold">VI. Kendala dan Solusi (opsional)</h3>
-              <div className="grid grid-cols-4 gap-x-4 ml-4">
-                <span className="w-32">Kendala</span>
-                <span className="col-span-3">: {details?.kendala || "-"}</span>
-                <span className="w-32">Solusi</span>
-                <span className="col-span-3">: {details?.solusi || "-"}</span>
+              <h3 className="font-bold">D. Simpulan dan Saran</h3>
+              <div className="ml-6">
+                {details?.kendala || details?.solusi ? (
+                  <div className="space-y-2">
+                    <p><span className="font-bold italic">Kendala:</span> {details.kendala || "-"}</p>
+                    <p><span className="font-bold italic">Solusi:</span> {details.solusi || "-"}</p>
+                  </div>
+                ) : (
+                  <p>Kegiatan terlaksana dengan baik tanpa kendala berarti.</p>
+                )}
               </div>
             </section>
 
-            <section className="space-y-2 pt-4">
-              <h3 className="font-bold">VII. Penutup</h3>
-              <p>Demikian laporan pelaksanaan tugas ini disusun sebagai bentuk pertanggungjawaban pelaksanaan tugas yang diberikan.</p>
+            {/* E. Penutup */}
+            <section className="space-y-2">
+              <h3 className="font-bold">E. Penutup</h3>
+              <p className="ml-6">Demikian laporan tentang {task.description} ini disusun untuk dipergunakan sebagaimana mestinya.</p>
             </section>
 
+            {/* Foto Dokumentasi - Hanya Tampil di Layar, Tidak Print (Optional sesuai keinginan user) */}
             {task.documentationPhotos && task.documentationPhotos.length > 0 && (
               <section className="space-y-4 pt-10 no-print">
                 <h3 className="font-bold uppercase text-[10px] tracking-widest text-blue-700">Lampiran Dokumentasi</h3>
@@ -267,10 +257,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks, currentUser, onUpdateT
             )}
           </div>
 
+          {/* Blok Tanda Tangan */}
           <div className="mt-20 flex justify-end">
-            <div className="text-center w-80 font-sans">
-              <p>Ternate, {task.reportDate || new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
-              <p className="mb-24 mt-2 font-bold">Pelapor,</p>
+            <div className="text-left w-72 font-sans">
+              <p>Dibuat di Ternate</p>
+              <p>tanggal {task.reportDate || new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
+              
+              <p className="mt-8 mb-24 font-bold">{pelapor.position},</p>
+              
               <p className="font-bold underline uppercase">{pelapor.name}</p>
               <p className="text-xs text-slate-500">NIP. {pelapor.nip}</p>
             </div>
