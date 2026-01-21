@@ -5,10 +5,7 @@ import {
   UserMinus, 
   FileText, 
   CheckCircle, 
-  Search,
-  Filter,
   TrendingUp,
-  AlertTriangle,
   ArrowRight,
   ClipboardCheck
 } from 'lucide-react';
@@ -22,8 +19,7 @@ import {
   ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell,
-  Legend
+  Cell
 } from 'recharts';
 import { MOCK_CHART_DATA } from '../data';
 import { Employee, EmployeeStatus, AssignmentTask, ReportStatus } from '../types';
@@ -43,14 +39,11 @@ interface DashboardPageProps {
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], currentUser, onNavigate }) => {
   const isAdmin = currentUser?.nip === 'Admin';
-  const [filter, setFilter] = useState({ 
-    month: 'Januari', 
-    year: '2026', 
+  const [filter] = useState({ 
     unit: 'Semua Unit',
     search: ''
   });
 
-  // Filter tugas personal untuk pegawai yang login
   const pendingReports = useMemo(() => {
     if (isAdmin) return [];
     return tasks.filter(t => 
@@ -75,145 +68,122 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
     const assigned = filteredEmployees.filter(e => e.status === EmployeeStatus.ASSIGNED).length;
     const unassigned = filteredEmployees.filter(e => e.status === EmployeeStatus.UNASSIGNED).length;
     const avgDiscipline = filteredEmployees.reduce((acc, curr) => acc + curr.disciplineScore.final, 0) / total;
-    const activeSurat = isAdmin ? tasks.length : tasks.filter(t => t.employees.some(e => e.nip === currentUser?.nip)).length;
+    
+    const activeSurat = isAdmin 
+      ? tasks.length 
+      : tasks.filter(t => t.employees.some(e => e.nip === currentUser?.nip)).length;
     
     return { assigned, unassigned, activeSurat, avgDiscipline };
   }, [filteredEmployees, tasks, isAdmin, currentUser]);
 
-  const pieData = useMemo(() => {
-    const categories = [
-      { name: 'Sangat Baik (>90%)', value: 0, fill: '#1d4ed8' }, 
-      { name: 'Baik (75-90%)', value: 0, fill: '#3b82f6' },      
-      { name: 'Cukup (60-75%)', value: 0, fill: '#f59e0b' },     
-      { name: 'Kurang (<60%)', value: 0, fill: '#ef4444' },     
-    ];
-    filteredEmployees.forEach(emp => {
-      const score = emp.disciplineScore.final;
-      if (score > 90) categories[0].value++;
-      else if (score >= 75) categories[1].value++;
-      else if (score >= 60) categories[2].value++;
-      else categories[3].value++;
-    });
-    return categories.filter(c => c.value > 0);
-  }, [filteredEmployees]);
-
-  const units = useMemo(() => {
-    const uniqueUnits = Array.from(new Set(employees.map(e => e.unit).filter(u => u && u !== '-')));
-    return ['Semua Unit', ...uniqueUnits];
-  }, [employees]);
-
   const StatCard = ({ icon: Icon, label, value, color, bgColor }: any) => (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
+    <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-slate-500 text-sm font-medium mb-1">{label}</p>
-          <h3 className="text-3xl font-bold text-slate-800 tabular-nums">{value}</h3>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">{label}</p>
+          <h3 className="text-4xl font-black text-slate-800 tabular-nums tracking-tighter">{value}</h3>
         </div>
-        <div className={`p-3 rounded-xl ${bgColor} ${color} shadow-inner`}>
-          <Icon size={24} />
+        <div className={`p-4 rounded-2xl ${bgColor} ${color} shadow-sm border border-current/10`}>
+          <Icon size={28} />
         </div>
       </div>
-      <div className="mt-4 flex items-center text-[10px] uppercase tracking-wider font-bold text-slate-400">
-        <TrendingUp size={12} className="mr-1 text-blue-500" />
-        <span>Data Real-time BPMP</span>
+      <div className="mt-6 flex items-center text-[9px] uppercase tracking-[0.2em] font-black text-slate-400">
+        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2 animate-pulse"></div>
+        <span>Data Terverifikasi</span>
       </div>
     </div>
   );
 
   return (
-    <div className="space-y-6">
-      {/* Banner Tugas untuk Pegawai */}
+    <div className="space-y-8">
       {!isAdmin && pendingReports.length > 0 && (
-        <div className="bg-blue-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-              <ClipboardCheck size={32} />
+        <div className="bg-rose-600 rounded-[40px] p-10 text-white shadow-2xl shadow-rose-200 flex flex-col md:flex-row items-center justify-between gap-8 animate-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-8">
+            <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center backdrop-blur-xl border border-white/30">
+              <ClipboardCheck size={40} />
             </div>
             <div>
-              <h4 className="text-xl font-black uppercase tracking-tight">Pelaporan Tugas Diperlukan</h4>
-              <p className="text-blue-100 text-sm mt-1 font-medium">Anda memiliki {pendingReports.length} tugas yang belum dilaporkan. Segera unggah laporan untuk verifikasi kedisiplinan.</p>
+              <h4 className="text-2xl font-black uppercase tracking-tighter">Laporan Tugas Tertunda</h4>
+              <p className="text-rose-100 text-sm mt-2 font-medium">Anda sedang bertugas pada kegiatan penting. Segera unggah laporan pelaksanaan tugas Anda.</p>
             </div>
           </div>
           <button 
             onClick={() => onNavigate && onNavigate('reports')}
-            className="bg-white text-blue-700 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center gap-3 hover:bg-blue-50 transition-all shadow-lg active:scale-95 shrink-0"
+            className="bg-white text-rose-600 px-10 py-5 rounded-[24px] font-black text-sm uppercase tracking-widest flex items-center gap-4 hover:bg-rose-50 transition-all shadow-xl active:scale-95 shrink-0"
           >
             Lapor Sekarang
-            <ArrowRight size={18} />
+            <ArrowRight size={20} />
           </button>
         </div>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard icon={Users} label={isAdmin ? "Pegawai Bertugas" : "Status Saya"} value={isAdmin ? dynamicStats.assigned : "Aktif"} color="text-blue-600" bgColor="bg-blue-50" />
-        {isAdmin && <StatCard icon={UserMinus} label="Pegawai Tidak Bertugas" value={dynamicStats.unassigned} color="text-amber-600" bgColor="bg-amber-50" />}
-        <StatCard icon={FileText} label={isAdmin ? "Surat Tugas Aktif" : "Total Penugasan"} value={dynamicStats.activeSurat} color="text-indigo-600" bgColor="bg-indigo-50" />
-        <StatCard icon={CheckCircle} label="Indeks Disiplin" value={`${dynamicStats.avgDiscipline.toFixed(1)}%`} color="text-emerald-600" bgColor="bg-emerald-50" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <StatCard icon={Users} label="Pegawai Bertugas" value={dynamicStats.assigned} color="text-rose-600" bgColor="bg-rose-50" />
+        <StatCard icon={UserMinus} label="Pegawai Standby" value={dynamicStats.unassigned} color="text-emerald-600" bgColor="bg-emerald-50" />
+        <StatCard icon={FileText} label="Surat Tugas Aktif" value={dynamicStats.activeSurat} color="text-blue-600" bgColor="bg-blue-50" />
+        <StatCard icon={CheckCircle} label="Indeks Disiplin" value={`${dynamicStats.avgDiscipline.toFixed(1)}%`} color="text-indigo-600" bgColor="bg-indigo-50" />
       </div>
 
-      {/* Visualizations & Data */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h4 className="text-slate-800 font-bold flex items-center gap-3 uppercase tracking-tighter text-lg">
-              <TrendingUp className="text-blue-600" size={20} />
-              Grafik Tren Penugasan 2026
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-10">
+            <h4 className="text-slate-800 font-black flex items-center gap-4 uppercase tracking-tighter text-xl">
+              <TrendingUp className="text-blue-600" size={24} />
+              Statistik Kinerja BPMP 2026
             </h4>
           </div>
-          <div className="h-[320px]">
+          <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={MOCK_CHART_DATA}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 'bold'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 'bold'}} />
                 <Tooltip 
-                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} 
+                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', padding: '20px'}} 
                   cursor={{fill: '#f8fafc'}}
                 />
-                <Bar dataKey="bertugas" name="Bertugas" fill="#1d4ed8" radius={[6, 6, 0, 0]} barSize={40} />
-                <Bar dataKey="tidak" name="Tidak Bertugas" fill="#e2e8f0" radius={[6, 6, 0, 0]} barSize={40} />
+                <Bar dataKey="bertugas" name="Bertugas" fill="#e11d48" radius={[8, 8, 0, 0]} barSize={45} />
+                <Bar dataKey="tidak" name="Standby" fill="#10b981" radius={[8, 8, 0, 0]} barSize={45} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm flex flex-col">
-          <h4 className="text-slate-800 font-bold mb-8 uppercase tracking-tighter text-lg">Komposisi Kedisiplinan</h4>
-          <div className="flex-1 flex items-center justify-center">
-            {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={90}
-                    paddingAngle={8}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-slate-400 text-sm italic">Data belum tersedia</div>
-            )}
+        <div className="bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm flex flex-col items-center">
+          <h4 className="text-slate-800 font-black mb-10 uppercase tracking-tighter text-xl self-start">Ketersediaan SDM</h4>
+          <div className="relative w-full aspect-square max-w-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Bertugas', value: dynamicStats.assigned, fill: '#e11d48' },
+                    { name: 'Standby', value: dynamicStats.unassigned, fill: '#10b981' }
+                  ]}
+                  innerRadius={80}
+                  outerRadius={110}
+                  paddingAngle={10}
+                  dataKey="value"
+                >
+                   <Cell key="assigned" fill="#e11d48" />
+                   <Cell key="unassigned" fill="#10b981" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</span>
+              <span className="text-4xl font-black text-slate-800 tracking-tighter">{employees.length}</span>
+            </div>
           </div>
-          <div className="space-y-3 mt-6">
-            {pieData.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs font-bold">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }}></div>
-                  <span className="text-slate-500 uppercase">{item.name.split(' (')[0]}</span>
-                </div>
-                <span className="text-slate-800">{item.value} Pegawai</span>
-              </div>
-            ))}
+          <div className="w-full space-y-4 mt-10">
+             <div className="flex items-center justify-between p-4 bg-rose-50 rounded-2xl border border-rose-100">
+                <span className="text-[10px] font-black text-rose-700 uppercase tracking-widest">Bertugas pada kegiatan</span>
+                <span className="text-sm font-black text-rose-700">{dynamicStats.assigned}</span>
+             </div>
+             <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Siap bertugas (Standby)</span>
+                <span className="text-sm font-black text-emerald-700">{dynamicStats.unassigned}</span>
+             </div>
           </div>
         </div>
       </div>

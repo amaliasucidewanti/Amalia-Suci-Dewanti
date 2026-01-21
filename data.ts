@@ -28,9 +28,24 @@ const parseCSV = (text: string) => {
   return rows;
 };
 
+const parseDateSafely = (dateStr: string) => {
+  if (!dateStr) return null;
+  // Handle formats like YYYY-MM-DD or DD/MM/YYYY
+  if (dateStr.includes('-')) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  } else if (dateStr.includes('/')) {
+    const [d, m, y] = dateStr.split('/').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(dateStr);
+};
+
 export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], tasks: AssignmentTask[] }> => {
   try {
     let rawData: any;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     if (typeof google !== 'undefined' && google.script && google.script.run) {
       rawData = await new Promise((resolve, reject) => {
@@ -65,7 +80,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
           name: row[1] || 'Pegawai',
           position: row[2] || '-',
           unit: row[3] || '-',
-          status: EmployeeStatus.UNASSIGNED,
+          status: EmployeeStatus.UNASSIGNED, // Default Unassigned
           disciplineScore: { attendance: 0, assembly: 0, dailyLog: 0, report: 0, final: 0 }
         });
       });
@@ -102,8 +117,18 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
         const letterNum = row[1];
         if (!nip || !letterNum) return;
 
+        const start = parseDateSafely(String(row[5]));
+        const end = parseDateSafely(String(row[6]));
+        
+        // Logika Status: Pegawai berstatus ASSIGNED jika hari ini berada di dalam rentang tugas
         const emp = employeesMap.get(nip);
-        if (emp) emp.status = EmployeeStatus.ASSIGNED;
+        if (emp && start && end) {
+          const startTime = new Date(start).setHours(0,0,0,0);
+          const endTime = new Date(end).setHours(23,59,59,999);
+          if (today.getTime() >= startTime && today.getTime() <= endTime) {
+            emp.status = EmployeeStatus.ASSIGNED;
+          }
+        }
 
         if (tasksMap.has(letterNum)) {
           const existing = tasksMap.get(letterNum)!;
@@ -120,7 +145,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
             id: `task-${letterNum}`,
             letterNumber: letterNum,
             basis: row[2] || '-',
-            description: row[3] || '-',
+            description: row[3] || '-', // Nama Kegiatan
             location: row[4] || '-',
             startDate: String(row[5]),
             endDate: String(row[6]),
