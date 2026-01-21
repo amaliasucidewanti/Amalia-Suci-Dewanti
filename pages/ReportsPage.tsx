@@ -10,7 +10,9 @@ import {
   BookOpen,
   Camera,
   Pencil,
-  Trash2
+  Trash2,
+  MapPin,
+  Calendar
 } from 'lucide-react';
 import { LOGO_URL } from '../App';
 
@@ -147,24 +149,19 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks, currentUser, onUpdateT
   const handleDeleteReport = (task: AssignmentTask) => {
     if (window.confirm("Apakah Anda yakin ingin MENGHAPUS laporan ini? Status tugas akan kembali menjadi 'Belum Lapor'.")) {
       setIsSyncing(true);
-      
-      // Kirim reset ke backend melalui onUpdateTask
-      const resetTask: AssignmentTask = {
-        ...task,
-        reportStatus: ReportStatus.PENDING,
-        reportDate: undefined,
-        reportSummary: undefined,
-        reportDetails: undefined,
-        documentationPhotos: []
-      };
-      
-      onUpdateTask(resetTask);
-      
-      // Delay sedikit untuk memberi kesan sinkronisasi selesai (refreshData di App.tsx akan mengurus state)
       setTimeout(() => {
+        const resetTask: AssignmentTask = {
+          ...task,
+          reportStatus: ReportStatus.PENDING,
+          reportDate: undefined,
+          reportSummary: undefined,
+          reportDetails: undefined,
+          documentationPhotos: []
+        };
+        onUpdateTask(resetTask);
         setIsSyncing(false);
-        alert("Laporan telah berhasil dihapus dari arsip.");
-      }, 1500);
+        alert("Laporan telah dihapus dari arsip.");
+      }, 800);
     }
   };
 
@@ -332,15 +329,33 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks, currentUser, onUpdateT
             <tbody className="divide-y divide-slate-100">
               {filteredTasks.map(t => {
                 const isCreator = t.reportCreatorNip === currentUser?.nip;
+                const displayEmployee = t.employees[0] || (isAdmin ? null : currentUser);
                 return (
                   <tr key={t.id} className="hover:bg-slate-50/50 transition-all">
                     <td className="px-10 py-8">
-                      <span className="text-[10px] font-mono font-black text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">{t.letterNumber}</span>
-                      {isAdmin && t.employees[0] && <p className="mt-2 font-bold text-slate-800 text-xs">{t.employees[0].name}</p>}
+                      <div className="flex flex-col gap-3">
+                        <span className="w-fit text-[10px] font-mono font-black text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">{t.letterNumber}</span>
+                        {displayEmployee && (
+                          <div className="flex flex-col">
+                            <p className="font-bold text-blue-700 text-xs uppercase tracking-tight">{displayEmployee.name}</p>
+                            <p className="text-[9px] font-mono text-slate-400 mt-0.5">{displayEmployee.nip}</p>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-10 py-8">
-                      <p className="text-sm font-bold text-slate-700">{t.description}</p>
-                      <p className="text-[10px] text-slate-400 mt-1 font-bold">{t.location} | {t.startDate}</p>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nama Kegiatan:</p>
+                        <p className="text-sm font-bold text-slate-700 leading-snug">{t.description}</p>
+                        <div className="flex items-center gap-3 mt-3">
+                           <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                             <MapPin size={12} className="text-slate-300" /> {t.location}
+                           </p>
+                           <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                             <Calendar size={12} className="text-slate-300" /> {t.startDate}
+                           </p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-10 py-8 text-center">
                       <span className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase border ${t.reportStatus === ReportStatus.SUBMITTED ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100 animate-pulse'}`}>
@@ -352,19 +367,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks, currentUser, onUpdateT
                         {t.reportStatus === ReportStatus.SUBMITTED ? (
                           <>
                             <button onClick={() => setShowPdfPreview(t)} className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Lihat PDF"><Eye size={20} /></button>
-                            
-                            {/* Tombol Edit & Hapus hanya muncul untuk pembuat laporan */}
-                            {isCreator && (
+                            {(isCreator || isAdmin) && (
                               <>
                                 <button onClick={() => handleOpenUpload(t, true)} className="p-3 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors" title="Edit Laporan"><Pencil size={20} /></button>
-                                <button 
-                                  onClick={() => handleDeleteReport(t)} 
-                                  disabled={isSyncing}
-                                  className={`p-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors ${isSyncing ? 'opacity-30 cursor-not-allowed' : ''}`} 
-                                  title="Hapus Laporan"
-                                >
-                                  {isSyncing ? <Loader2 size={20} className="animate-spin" /> : <Trash2 size={20} />}
-                                </button>
+                                <button onClick={() => handleDeleteReport(t)} className="p-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors" title="Hapus Laporan"><Trash2 size={20} /></button>
                               </>
                             )}
                           </>
@@ -392,7 +398,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks, currentUser, onUpdateT
                        <p className="text-xs font-mono font-bold text-slate-800">{uploadModal.letterNumber}</p>
                     </div>
                     <div>
-                       <label className="text-[9px] font-black text-slate-400 uppercase">Kegiatan Utama</label>
+                       <label className="text-[9px] font-black text-slate-400 uppercase">Nama Kegiatan</label>
                        <p className="text-sm font-bold text-slate-800 leading-relaxed">{uploadModal.description}</p>
                     </div>
                  </div>
