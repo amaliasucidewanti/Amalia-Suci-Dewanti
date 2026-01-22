@@ -10,6 +10,26 @@ export enum ReportStatus {
   VERIFIED = 'Terverifikasi'
 }
 
+export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN_TIM = 'ADMIN_TIM',
+  PEGAWAI = 'PEGAWAI'
+}
+
+export enum AccountStatus {
+  ACTIVE = 'Aktif',
+  LOCKED = 'Terkunci',
+  MUST_CHANGE = 'Wajib Ganti Password'
+}
+
+export interface ResetLog {
+  targetName: string;
+  targetNip: string;
+  adminName: string;
+  timestamp: string;
+  reason: string;
+}
+
 export interface ReportDetails {
   uraian: string;
   hasil: string;
@@ -24,6 +44,8 @@ export interface Employee {
   position: string;
   unit: string;
   status: EmployeeStatus;
+  accountStatus?: AccountStatus;
+  lastReset?: string;
   disciplineScore: {
     attendance: number;
     assembly: number;
@@ -45,11 +67,11 @@ export interface AssignmentTask {
   employees: Employee[];
   reportStatus?: ReportStatus;
   reportDate?: string;
-  reportSummary?: string; // Digunakan untuk menyimpan JSON detail laporan
-  reportCreatorNip?: string; // NIP pegawai yang membuat laporan
+  reportSummary?: string; 
+  reportCreatorNip?: string;
   reportDetails?: ReportDetails;
   reportFileUrl?: string;
-  documentationPhotos?: string[]; // Array of base64 image strings
+  documentationPhotos?: string[];
 }
 
-export type Page = 'login' | 'dashboard' | 'employees' | 'calendar' | 'unassigned' | 'form' | 'preview' | 'discipline' | 'reports';
+export type Page = 'login' | 'dashboard' | 'employees' | 'calendar' | 'unassigned' | 'form' | 'preview' | 'discipline' | 'reports' | 'reset-password';

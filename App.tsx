@@ -13,9 +13,12 @@ import {
   Loader2,
   Bell,
   User as UserIcon,
-  ShieldAlert
+  ShieldAlert,
+  Settings,
+  KeyRound,
+  History
 } from 'lucide-react';
-import { Page, Employee, EmployeeStatus, AssignmentTask, ReportStatus } from './types';
+import { Page, Employee, EmployeeStatus, AssignmentTask, ReportStatus, UserRole, AccountStatus } from './types';
 import { fetchSpreadsheetData } from './data';
 import DashboardPage from './pages/DashboardPage';
 import EmployeesPage from './pages/EmployeesPage';
@@ -26,6 +29,7 @@ import PreviewPage from './pages/PreviewPage';
 import DisciplinePage from './pages/DisciplinePage';
 import ReportsPage from './pages/ReportsPage';
 import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 declare const google: any;
 
@@ -40,7 +44,6 @@ const App: React.FC = () => {
   const [selectedForTask, setSelectedForTask] = useState<Employee[]>([]);
   const [activeTask, setActiveTask] = useState<AssignmentTask | null>(null);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
-  const [currentTime, setCurrentTime] = useState('');
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -53,7 +56,12 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await fetchSpreadsheetData();
-      setEmployees(data.employees);
+      // Initialize mock account statuses for display
+      const empsWithStatus = data.employees.map(e => ({
+        ...e,
+        accountStatus: e.accountStatus || AccountStatus.ACTIVE
+      }));
+      setEmployees(empsWithStatus);
       setTasks(data.tasks);
     } catch (error) {
       console.error("Failed to refresh data:", error);
@@ -65,50 +73,29 @@ const App: React.FC = () => {
 
   useEffect(() => {
     refreshData();
-    const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString('id-ID', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit',
-        timeZoneName: 'short' 
-      }));
-    }, 1000);
-    return () => clearInterval(timer);
   }, []);
 
   const handleUpdateTask = async (updatedTask: AssignmentTask) => {
     setIsLoading(true);
     if (typeof google !== 'undefined' && google.script) {
-      if (updatedTask.reportStatus === ReportStatus.PENDING) {
-        const targetNip = updatedTask.reportCreatorNip || currentUser.nip;
-        google.script.run
-          .withSuccessHandler(() => {
-            refreshData();
-            showToast("Laporan berhasil dihapus");
-          })
-          .withFailureHandler(() => showToast("Gagal menghapus laporan", "error"))
-          .deleteReportRecord(updatedTask.letterNumber, targetNip);
-      } else {
-        google.script.run
-          .withSuccessHandler(() => {
-            refreshData();
-            showToast("Laporan berhasil disimpan");
-          })
-          .withFailureHandler(() => showToast("Gagal menyimpan laporan", "error"))
-          .saveReportRecord({
-            letterNumber: updatedTask.letterNumber,
-            summary: updatedTask.reportSummary,
-            reportDate: updatedTask.reportDate,
-            nip: currentUser.nip,
-            documentationPhotos: updatedTask.documentationPhotos
-          });
-      }
+      google.script.run
+        .withSuccessHandler(() => {
+          refreshData();
+          showToast("Data Berhasil Diperbarui");
+        })
+        .withFailureHandler(() => {
+          setIsLoading(false);
+          showToast("Gagal memperbarui data", "error");
+        })
+        .saveReportRecord({
+          ...updatedTask,
+          nip: currentUser.nip
+        });
     } else {
       setTimeout(() => {
         setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
         setIsLoading(false);
-        showToast("Mode Demo: Data diperbarui secara lokal");
+        showToast("Mode Demo: Data diperbarui");
       }, 800);
     }
   };
@@ -131,9 +118,6 @@ const App: React.FC = () => {
     } else {
       setTimeout(() => {
         setTasks(prev => [...prev, activeTask]);
-        setEmployees(prev => prev.map(e => 
-          activeTask.employees.find(ae => ae.nip === e.nip) ? {...e, status: EmployeeStatus.ASSIGNED} : e
-        ));
         setCurrentPage('dashboard');
         setIsLoading(false);
         showToast("Mode Demo: Surat Tugas disimpan");
@@ -142,46 +126,76 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (username: string, password: string, isNewPassword = false) => {
+    const adminUsernames = ['Admin', 'timkerpaud', 'timkersd', 'timkersmp', 'timkersma', 'subbagumum'];
+    
+    // Super Admin
     if (username === 'Admin') {
       if (password === '12345' && !isNewPassword) {
         return { success: true, mustChange: true };
       }
-      const admin = { name: 'Administrator', nip: 'Admin', unit: 'BPMP Malut', role: 'SUPER_ADMIN' };
-      setCurrentUser(admin);
+      setCurrentUser({ name: 'Super Administrator', nip: 'Admin', unit: 'BPMP Maluku Utara', role: UserRole.SUPER_ADMIN });
       setCurrentPage('dashboard');
-      showToast(isNewPassword ? "Password diperbarui! Selamat Datang" : "Selamat Datang, Admin");
+      showToast(isNewPassword ? "Password diperbarui!" : "Selamat Datang, Super Admin");
       return { success: true };
     }
     
+    // Admin Tim Kerja
+    if (adminUsernames.includes(username)) {
+      if (password === '12345' && !isNewPassword) {
+        return { success: true, mustChange: true };
+      }
+      const unitMap: any = {
+        'timkerpaud': 'Tim Kerja PAUD',
+        'timkersd': 'Tim Kerja SD',
+        'timkersmp': 'Tim Kerja SMP',
+        'timkersma': 'Tim Kerja SMA',
+        'subbagumum': 'Subbagian Umum'
+      };
+      setCurrentUser({ name: `Admin ${unitMap[username] || 'Tim Kerja'}`, nip: username, unit: unitMap[username] || 'Tim Kerja', role: UserRole.ADMIN_TIM });
+      setCurrentPage('dashboard');
+      showToast("Selamat Datang, Admin Tim");
+      return { success: true };
+    }
+
+    // Pegawai
     const user = employees.find(emp => emp.nip === username);
     if (user) {
       if (password === '12345' && !isNewPassword) {
         return { success: true, mustChange: true };
       }
-      setCurrentUser({ ...user, role: 'PEGAWAI' });
+      setCurrentUser({ ...user, role: UserRole.PEGAWAI });
       setCurrentPage('dashboard');
-      showToast(isNewPassword ? "Password diperbarui! Selamat Datang" : `Selamat Datang, ${user.name}`);
+      showToast(isNewPassword ? "Password diperbarui!" : `Selamat Datang, ${user.name}`);
       return { success: true };
     }
-    return { success: false, message: 'NIP tidak ditemukan dalam database.' };
+    return { success: false, message: 'NIP atau Username tidak ditemukan.' };
   };
 
   const stats = useMemo(() => {
     const assigned = employees.filter(e => e.status === EmployeeStatus.ASSIGNED).length;
     const unassigned = employees.filter(e => e.status === EmployeeStatus.UNASSIGNED).length;
-    const avg = employees.length 
-      ? employees.reduce((a, c) => a + (c.disciplineScore?.final || 0), 0) / employees.length 
-      : 0;
+    const avg = employees.length ? employees.reduce((a, c) => a + (c.disciplineScore?.final || 0), 0) / employees.length : 0;
     return { assigned, unassigned, activeSurat: tasks.length, avgDiscipline: avg };
   }, [employees, tasks]);
 
   if (currentPage === 'login') return <LoginPage onLogin={handleLogin} isLoadingData={isLoading} />;
 
-  const isAdmin = currentUser?.nip === 'Admin';
+  const isAdmin = currentUser?.role === UserRole.SUPER_ADMIN;
+  const isAdminTim = currentUser?.role === UserRole.ADMIN_TIM;
+  const isAnyAdmin = isAdmin || isAdminTim;
+
+  const sidebarItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM, UserRole.PEGAWAI] },
+    { id: 'employees', label: 'Data Pegawai', icon: Users, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM] },
+    { id: 'calendar', label: 'Kalender Tugas', icon: CalendarIcon, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM, UserRole.PEGAWAI] },
+    { id: 'unassigned', label: 'Buat Penugasan', icon: UserX, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM] },
+    { id: 'discipline', label: 'Kedisiplinan', icon: CheckCircle, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM, UserRole.PEGAWAI] },
+    { id: 'reports', label: 'Laporan Tugas', icon: BarChart3, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM, UserRole.PEGAWAI] },
+    { id: 'reset-password', label: 'Reset Password', icon: KeyRound, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM] },
+  ];
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
-      {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-10 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 rounded-[24px] shadow-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-300 font-black text-[10px] uppercase tracking-[0.2em] ${
           toast.type === 'success' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-rose-600 text-white border-rose-500'
@@ -201,15 +215,8 @@ const App: React.FC = () => {
         </div>
 
         <nav className="flex-1 p-8 space-y-3 overflow-y-auto">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'employees', label: 'Data Pegawai', icon: Users },
-            { id: 'calendar', label: 'Kalender Tugas', icon: CalendarIcon },
-            { id: 'unassigned', label: 'Buat Penugasan', icon: UserX, adminOnly: true },
-            { id: 'discipline', label: 'Kedisiplinan', icon: CheckCircle },
-            { id: 'reports', label: 'Laporan Tugas', icon: BarChart3 },
-          ].map(item => {
-            if (item.adminOnly && !isAdmin) return null;
+          {sidebarItems.map(item => {
+            if (!item.roles.includes(currentUser?.role)) return null;
             return (
               <button 
                 key={item.id} 
@@ -240,25 +247,27 @@ const App: React.FC = () => {
               {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <div className="hidden sm:block">
-              <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800">{currentPage}</h2>
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800">{currentPage.replace('-', ' ')}</h2>
               <div className="flex items-center gap-2 mt-1">
                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></div>
-                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Sistem Operasional Digital BPMP</p>
+                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">BPMP Maluku Utara - Akses Internal</p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-10">
              {isLoading && <Loader2 size={24} className="animate-spin text-blue-600" />}
-             
              <div className="relative">
-                <button 
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center gap-6 group hover:bg-slate-50 p-2 rounded-3xl transition-all"
-                >
+                <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center gap-6 group hover:bg-slate-50 p-2 rounded-3xl transition-all">
                   <div className="text-right hidden md:block">
                     <p className="text-sm font-black text-slate-800 uppercase tracking-tight group-hover:text-blue-700 transition-colors">{currentUser?.name}</p>
-                    <p className="text-[10px] text-blue-600 font-black uppercase tracking-[0.2em]">{isAdmin ? 'SUPER ADMIN' : currentUser?.nip}</p>
+                    <div className="flex items-center gap-2 justify-end">
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-black text-white ${
+                        isAdmin ? 'bg-rose-600' : isAdminTim ? 'bg-amber-600' : 'bg-blue-600'
+                      }`}>
+                        {currentUser?.role?.replace('_', ' ')}
+                      </span>
+                    </div>
                   </div>
                   <div className="w-16 h-16 bg-blue-700 rounded-[24px] border-4 border-white shadow-2xl flex items-center justify-center text-white font-black text-2xl shrink-0 uppercase transition-transform group-hover:scale-105">
                      {currentUser?.name?.charAt(0) || 'A'}
@@ -268,13 +277,13 @@ const App: React.FC = () => {
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-4 w-64 bg-white rounded-[32px] shadow-2xl border border-slate-100 p-4 z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="p-4 border-b border-slate-50 mb-2">
-                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Informasi Akun</p>
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unit Kerja</p>
                        <p className="text-xs font-bold text-slate-800 mt-1">{currentUser?.unit}</p>
                     </div>
-                    <button onClick={() => showToast("Fitur sedang dikembangkan", "success")} className="w-full flex items-center gap-3 px-4 py-4 text-[10px] font-black text-slate-600 hover:bg-slate-50 rounded-2xl uppercase tracking-widest transition-all">
+                    <button className="w-full flex items-center gap-3 px-4 py-4 text-[10px] font-black text-slate-600 hover:bg-slate-50 rounded-2xl uppercase tracking-widest transition-all">
                       <UserIcon size={18} /> Profil Pribadi
                     </button>
-                    <button onClick={() => showToast("Password berhasil disetel ulang", "success")} className="w-full flex items-center gap-3 px-4 py-4 text-[10px] font-black text-slate-600 hover:bg-slate-50 rounded-2xl uppercase tracking-widest transition-all">
+                    <button onClick={() => showToast("Fitur Ubah Password tersedia di halaman login", "success")} className="w-full flex items-center gap-3 px-4 py-4 text-[10px] font-black text-slate-600 hover:bg-slate-50 rounded-2xl uppercase tracking-widest transition-all">
                       <ShieldAlert size={18} /> Ganti Password
                     </button>
                   </div>
@@ -293,6 +302,10 @@ const App: React.FC = () => {
             {currentPage === 'preview' && activeTask && <PreviewPage task={activeTask} onBack={() => setCurrentPage('form')} onSave={handleSaveAssignment} />}
             {currentPage === 'discipline' && <DisciplinePage employees={employees} />}
             {currentPage === 'reports' && <ReportsPage tasks={tasks} currentUser={currentUser} onUpdateTask={handleUpdateTask} />}
+            {currentPage === 'reset-password' && <ResetPasswordPage employees={employees} currentUser={currentUser} onUpdateEmployee={(e) => {
+              setEmployees(prev => prev.map(emp => emp.nip === e.nip ? { ...emp, ...e } : emp));
+              showToast(`Password ${e.name} berhasil direset`, "success");
+            }} />}
           </div>
         </div>
       </main>
