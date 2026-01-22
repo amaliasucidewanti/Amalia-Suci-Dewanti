@@ -88,18 +88,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
             </div>
             <div className="flex-1">
               <h4 className="text-2xl font-black uppercase tracking-tighter">Laporan Tugas Perlu Diisi</h4>
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-2">
                 {pendingReports.map(t => (
-                  <p key={t.id} className="text-rose-100 text-sm font-medium flex items-center gap-2">
-                    <Briefcase size={14} /> Bertugas pada kegiatan: <span className="font-bold underline">{t.description}</span>
-                  </p>
+                  <div key={t.id} className="bg-white/10 p-4 rounded-2xl border border-white/20">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-200 mb-1">Nama Kegiatan:</p>
+                    <p className="text-sm font-bold text-white leading-snug">
+                      {t.description}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>
           </div>
           <button 
             onClick={() => onNavigate && onNavigate('reports')}
-            className="bg-white text-rose-600 px-10 py-5 rounded-[24px] font-black text-sm uppercase tracking-widest flex items-center gap-4 hover:bg-rose-50 transition-all shadow-xl"
+            className="bg-white text-rose-600 px-10 py-5 rounded-[24px] font-black text-sm uppercase tracking-widest flex items-center gap-4 hover:bg-rose-50 transition-all shadow-xl shrink-0"
           >
             Lapor Sekarang
             <ArrowRight size={20} />

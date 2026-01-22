@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Employee, EmployeeStatus, Page } from '../types';
-import { Search, Calendar, Eye, MapPin } from 'lucide-react';
+import { Search, Calendar, Eye, Briefcase } from 'lucide-react';
 
 interface EmployeesPageProps {
   employees: Employee[];
@@ -44,7 +44,7 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({ employees, navigate }) =>
               <tr className="bg-slate-50/50 border-b border-slate-100">
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Pegawai / NIP</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Jabatan</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aktivitas Terakhir</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Kegiatan Saat Ini</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Aksi</th>
               </tr>
@@ -69,11 +69,13 @@ const EmployeesPage: React.FC<EmployeesPageProps> = ({ employees, navigate }) =>
                     <td className="px-8 py-6">
                       {activeActivity ? (
                         <div className="flex flex-col gap-1 max-w-xs">
-                           <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Nama Kegiatan:</p>
-                           <p className="text-[11px] font-bold text-slate-700 leading-tight truncate" title={activeActivity}>{activeActivity}</p>
+                           <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1">
+                             <Briefcase size={10} /> Nama Kegiatan:
+                           </p>
+                           <p className="text-[11px] font-bold text-slate-700 leading-tight" title={activeActivity}>{activeActivity}</p>
                         </div>
                       ) : (
-                        <span className="text-[10px] font-bold text-slate-300 italic">Tidak ada kegiatan aktif</span>
+                        <span className="text-[10px] font-bold text-slate-300 italic">Tidak ada kegiatan luar kantor</span>
                       )}
                     </td>
                     <td className="px-8 py-6">

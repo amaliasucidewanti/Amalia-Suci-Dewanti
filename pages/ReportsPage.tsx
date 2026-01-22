@@ -12,7 +12,8 @@ import {
   Pencil,
   Trash2,
   MapPin,
-  Calendar
+  Calendar,
+  Briefcase
 } from 'lucide-react';
 import { LOGO_URL } from '../App';
 
@@ -339,7 +340,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ tasks, currentUser, onUpdateT
                     </td>
                     <td className="px-10 py-8">
                       <div className="space-y-1">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nama Kegiatan:</p>
+                        <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-1">
+                          <Briefcase size={10} /> Nama Kegiatan:
+                        </p>
                         <p className="text-sm font-bold text-slate-700 leading-snug">{t.description}</p>
                         <div className="flex items-center gap-3 mt-3">
                            <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
