@@ -14,7 +14,8 @@ import {
   Bell,
   User as UserIcon,
   ShieldAlert,
-  KeyRound
+  KeyRound,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Page, Employee, EmployeeStatus, AssignmentTask, ReportStatus, UserRole, AccountStatus } from './types';
 import { fetchSpreadsheetData } from './data';
@@ -28,6 +29,7 @@ import DisciplinePage from './pages/DisciplinePage';
 import ReportsPage from './pages/ReportsPage';
 import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import RecapPage from './pages/RecapPage';
 
 declare const google: any;
 
@@ -176,7 +178,6 @@ const App: React.FC = () => {
 
   const isAdmin = currentUser?.role === UserRole.SUPER_ADMIN;
   const isAdminTim = currentUser?.role === UserRole.ADMIN_TIM;
-  const isAnyAdmin = isAdmin || isAdminTim;
 
   const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM, UserRole.PEGAWAI] },
@@ -185,6 +186,7 @@ const App: React.FC = () => {
     { id: 'unassigned', label: 'Buat Penugasan', icon: UserX, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM] },
     { id: 'discipline', label: 'Kedisiplinan', icon: CheckCircle, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM, UserRole.PEGAWAI] },
     { id: 'reports', label: 'Laporan Tugas', icon: BarChart3, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM, UserRole.PEGAWAI] },
+    { id: 'recap', label: 'Rekap Global', icon: FileSpreadsheet, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM, UserRole.PEGAWAI] },
     { id: 'reset-password', label: 'Reset Password', icon: KeyRound, roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_TIM] },
   ];
 
@@ -292,10 +294,11 @@ const App: React.FC = () => {
             {currentPage === 'employees' && <EmployeesPage employees={employees} navigate={setCurrentPage} />}
             {currentPage === 'calendar' && <CalendarPage employees={employees} tasks={tasks} onNavigate={setCurrentPage} />}
             {currentPage === 'unassigned' && <UnassignedPage employees={employees} onSelectEmployees={(s) => { setSelectedForTask(s); setCurrentPage('form'); }} />}
-            {currentPage === 'form' && <FormPage selectedEmployees={selectedForTask} onPreview={(t) => { setActiveTask(t); setCurrentPage('preview'); }} onCancel={() => setCurrentPage('unassigned')} />}
+            {currentPage === 'form' && <FormPage tasks={tasks} selectedEmployees={selectedForTask} onPreview={(t) => { setActiveTask(t); setCurrentPage('preview'); }} onCancel={() => setCurrentPage('unassigned')} />}
             {currentPage === 'preview' && activeTask && <PreviewPage task={activeTask} onBack={() => setCurrentPage('form')} onSave={handleSaveAssignment} />}
             {currentPage === 'discipline' && <DisciplinePage employees={employees} />}
             {currentPage === 'reports' && <ReportsPage tasks={tasks} currentUser={currentUser} onUpdateTask={handleUpdateTask} />}
+            {currentPage === 'recap' && <RecapPage tasks={tasks} employees={employees} />}
             {currentPage === 'reset-password' && <ResetPasswordPage employees={employees} currentUser={currentUser} onUpdateEmployee={(update) => {
               const target = employees.find(emp => emp.nip === update.nip);
               setEmployees(prev => prev.map(emp => emp.nip === update.nip ? { ...emp, ...update } : emp));

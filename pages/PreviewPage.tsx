@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AssignmentTask } from '../types';
-import { Printer, Download, Edit, Save, FileCheck } from 'lucide-react';
+import { Printer, Download, Edit, Save, FileCheck, Globe, CreditCard } from 'lucide-react';
 import { LOGO_URL } from '../App';
 
 interface PreviewPageProps {
@@ -13,16 +13,16 @@ interface PreviewPageProps {
 const PreviewPage: React.FC<PreviewPageProps> = ({ task, onBack, onSave }) => {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between no-print">
         <h3 className="text-xl font-bold text-slate-800">Pratinjau Surat Tugas Resmi</h3>
         <div className="flex gap-2">
           <button onClick={onBack} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm">
             <Edit size={16} />
             Edit Data
           </button>
-          <button className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm">
+          <button onClick={() => window.print()} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm">
             <Printer size={16} />
-            Cetak
+            Cetak PDF
           </button>
           <button onClick={onSave} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl text-sm font-black flex items-center gap-2 transition-all shadow-lg shadow-emerald-100 uppercase tracking-widest">
             <Save size={16} />
@@ -31,7 +31,7 @@ const PreviewPage: React.FC<PreviewPageProps> = ({ task, onBack, onSave }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 p-12 min-h-[1050px] relative overflow-hidden font-serif">
+      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 p-12 md:p-16 min-h-[1050px] relative overflow-hidden font-serif">
         {/* Letterhead */}
         <div className="flex items-start border-b-[3px] border-slate-900 pb-4 mb-8">
           <div className="w-24 h-24 flex items-center justify-center shrink-0">
@@ -46,6 +46,24 @@ const PreviewPage: React.FC<PreviewPageProps> = ({ task, onBack, onSave }) => {
           </div>
         </div>
 
+        {/* Info Box (Internal Layout Details) */}
+        <div className="grid grid-cols-2 gap-4 mb-8 no-print font-sans">
+           <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-4">
+              <Globe size={20} className="text-blue-600" />
+              <div>
+                 <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Jenis Kegiatan</p>
+                 <p className="text-sm font-black text-blue-800">{task.activityType}</p>
+              </div>
+           </div>
+           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex items-center gap-4">
+              <CreditCard size={20} className="text-emerald-600" />
+              <div>
+                 <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Pembiayaan</p>
+                 <p className="text-sm font-black text-emerald-800">{task.fundingType}</p>
+              </div>
+           </div>
+        </div>
+
         {/* Content */}
         <div className="text-center mb-10">
           <h3 className="text-xl font-bold underline decoration-2 underline-offset-4 uppercase tracking-widest">Surat Tugas</h3>
@@ -57,7 +75,7 @@ const PreviewPage: React.FC<PreviewPageProps> = ({ task, onBack, onSave }) => {
             <span className="w-28 shrink-0 font-bold uppercase">Menimbang</span>
             <span className="shrink-0">:</span>
             <div className="flex-1 space-y-2">
-              <p>Bahwa untuk kelancaran pelaksanaan {task.description}, maka dipandang perlu menunjuk Pegawai sebagaimana tercantum dalam surat ini untuk melaksanakan tugas dimaksud.</p>
+              <p>Bahwa dalam rangka pelaksanaan program kerja BPMP Provinsi Maluku Utara Tahun Anggaran 2026, khususnya kegiatan <strong>{task.description}</strong>, dipandang perlu menugaskan personil yang berkompeten.</p>
             </div>
           </div>
 
@@ -88,10 +106,6 @@ const PreviewPage: React.FC<PreviewPageProps> = ({ task, onBack, onSave }) => {
                     <span>: {emp.nip}</span>
                   </div>
                   <div className="flex gap-6">
-                    <span className="w-36">Pangkat/Gol</span>
-                    <span>: Penata / III.c</span>
-                  </div>
-                  <div className="flex gap-6">
                     <span className="w-36">Jabatan</span>
                     <span>: {emp.position}</span>
                   </div>
@@ -105,15 +119,16 @@ const PreviewPage: React.FC<PreviewPageProps> = ({ task, onBack, onSave }) => {
             <span className="shrink-0">:</span>
             <div className="flex-1 space-y-4">
               <ol className="list-decimal pl-4 space-y-3">
-                <li>{task.description}</li>
-                <li>Dilaksanakan pada tanggal {new Date(task.startDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})} s.d. {new Date(task.endDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</li>
-                <li>Tempat pelaksanaan di {task.location}</li>
-                <li>Melaporkan hasil pelaksanaan tugas kepada atasan langsung selambat-lambatnya 3 (tiga) hari setelah pelaksanaan tugas selesai.</li>
+                <li>Melaksanakan kegiatan <strong>{task.description}</strong> secara <strong>{task.activityType}</strong>.</li>
+                <li>Terhitung mulai tanggal {new Date(task.startDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})} sampai dengan {new Date(task.endDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}.</li>
+                <li>Lokasi pelaksanaan di {task.location}.</li>
+                <li>Pembiayaan kegiatan dibebankan pada komponen <strong>{task.fundingType}</strong>.</li>
+                <li>Wajib menyampaikan laporan tertulis selambat-lambatnya 3 (tiga) hari kerja setelah tugas selesai.</li>
               </ol>
             </div>
           </div>
 
-          <p className="pt-6">Demikian Surat Tugas ini dibuat untuk dapat dilaksanakan dengan penuh tanggung jawab.</p>
+          <p className="pt-6">Demikian Surat Tugas ini diterbitkan untuk dilaksanakan dengan penuh dedikasi dan tanggung jawab.</p>
         </div>
 
         {/* Signature */}
@@ -130,16 +145,6 @@ const PreviewPage: React.FC<PreviewPageProps> = ({ task, onBack, onSave }) => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none select-none rotate-45 scale-[3]">
             <h1 className="text-9xl font-black uppercase text-blue-900">BPMP MALUT</h1>
         </div>
-      </div>
-
-      <div className="bg-blue-50 p-6 rounded-2xl border border-dashed border-blue-200 flex items-center gap-4">
-         <div className="p-3 bg-white rounded-xl text-blue-600 shadow-sm border border-blue-100">
-            <FileCheck size={24} />
-         </div>
-         <div className="flex-1">
-            <h5 className="font-bold text-blue-800">Dokumen Siap Terbit (WIT)</h5>
-            <p className="text-sm text-blue-700">Pastikan seluruh data sudah sesuai dengan RKA-KL Tahun Anggaran 2026 sebelum melakukan penyimpanan permanen.</p>
-         </div>
       </div>
     </div>
   );

@@ -22,6 +22,9 @@ export enum AccountStatus {
   MUST_CHANGE = 'Wajib Ganti Password'
 }
 
+export type ActivityType = 'Daring' | 'Luring';
+export type FundingType = 'Tanpa Biaya' | 'Biaya BPMP' | 'Biaya Penyelenggara';
+
 export interface ResetLog {
   targetName: string;
   targetNip: string;
@@ -65,6 +68,8 @@ export interface AssignmentTask {
   endDate: string;
   signee: string;
   employees: Employee[];
+  activityType?: ActivityType;
+  fundingType?: FundingType;
   reportStatus?: ReportStatus;
   reportDate?: string;
   reportSummary?: string; 
@@ -74,4 +79,4 @@ export interface AssignmentTask {
   documentationPhotos?: string[];
 }
 
-export type Page = 'login' | 'dashboard' | 'employees' | 'calendar' | 'unassigned' | 'form' | 'preview' | 'discipline' | 'reports' | 'reset-password';
+export type Page = 'login' | 'dashboard' | 'employees' | 'calendar' | 'unassigned' | 'form' | 'preview' | 'discipline' | 'reports' | 'reset-password' | 'recap';

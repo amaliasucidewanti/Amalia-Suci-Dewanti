@@ -8,21 +8,17 @@ import {
   TrendingUp,
   ArrowRight,
   ClipboardCheck,
-  Briefcase
+  Briefcase,
+  ExternalLink,
+  Calendar
 } from 'lucide-react';
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell
+  Cell,
+  Tooltip,
+  ResponsiveContainer 
 } from 'recharts';
-import { MOCK_CHART_DATA } from '../data';
 import { Employee, EmployeeStatus, AssignmentTask, ReportStatus } from '../types';
 
 interface DashboardPageProps {
@@ -39,7 +35,7 @@ interface DashboardPageProps {
 }
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], currentUser, onNavigate }) => {
-  const isAdmin = currentUser?.nip === 'Admin';
+  const isAdmin = currentUser?.nip === 'Admin' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN_TIM';
 
   const pendingReports = useMemo(() => {
     if (isAdmin) return [];
@@ -63,6 +59,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
     
     return { assigned, unassigned, activeSurat, avgDiscipline };
   }, [employees, tasks, isAdmin, currentUser]);
+
+  const recentTasks = useMemo(() => {
+    // Ambil 5 penugasan terbaru berdasarkan urutan data
+    return [...tasks].reverse().slice(0, 5);
+  }, [tasks]);
 
   const StatCard = ({ icon: Icon, label, value, color, bgColor }: any) => (
     <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
@@ -118,19 +119,77 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm">
-          <h4 className="text-slate-800 font-black mb-10 uppercase tracking-tighter text-xl">Statistik Operasional BPMP</h4>
-          <div className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={MOCK_CHART_DATA}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 'bold'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 'bold'}} />
-                <Tooltip contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)'}} />
-                <Bar dataKey="bertugas" name="Bertugas" fill="#e11d48" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="tidak" name="Standby" fill="#10b981" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="lg:col-span-2 bg-white p-10 rounded-[48px] border border-slate-200 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-10">
+            <div>
+              <h4 className="text-slate-800 font-black uppercase tracking-tighter text-xl leading-none">Rekap Penugasan Terbaru</h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 italic">Monitoring surat tugas yang baru terbit</p>
+            </div>
+            <button 
+              onClick={() => onNavigate && onNavigate('reports')}
+              className="p-3 text-blue-600 hover:bg-blue-50 rounded-2xl transition-all border border-blue-100 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+            >
+              Lihat Semua <ExternalLink size={14} />
+            </button>
+          </div>
+          
+          <div className="overflow-hidden flex-1">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">
+                    <th className="pb-4 pr-4">Nomor ST</th>
+                    <th className="pb-4 pr-4">Kegiatan</th>
+                    <th className="pb-4 pr-4">Pelaksana</th>
+                    <th className="pb-4 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {recentTasks.map((t, idx) => (
+                    <tr key={t.id} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="py-5 pr-4">
+                        <p className="text-[10px] font-mono font-black text-blue-700 bg-blue-50 px-2 py-1 rounded-md border border-blue-100 w-fit">{t.letterNumber}</p>
+                      </td>
+                      <td className="py-5 pr-4">
+                        <p className="text-xs font-bold text-slate-700 line-clamp-1 leading-snug">{t.description}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Calendar size={10} className="text-slate-400" />
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">{t.startDate} - {t.endDate}</p>
+                        </div>
+                      </td>
+                      <td className="py-5 pr-4">
+                        <div className="flex -space-x-2">
+                          {t.employees.slice(0, 3).map((emp, i) => (
+                            <div key={i} className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[8px] font-black uppercase text-slate-600" title={emp.name}>
+                              {emp.name.charAt(0)}
+                            </div>
+                          ))}
+                          {t.employees.length > 3 && (
+                            <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[8px] font-black text-slate-400">
+                              +{t.employees.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-5 text-right">
+                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full border ${
+                          t.reportStatus === ReportStatus.SUBMITTED 
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                            : 'bg-rose-50 text-rose-600 border-rose-100'
+                        }`}>
+                          {t.reportStatus === ReportStatus.SUBMITTED ? 'Selesai' : 'Proses'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {recentTasks.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-10 text-center text-slate-400 text-xs italic">Belum ada data penugasan yang tercatat.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -152,7 +211,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ employees, tasks = [], cu
                    <Cell key="assigned" fill="#e11d48" />
                    <Cell key="unassigned" fill="#10b981" />
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
