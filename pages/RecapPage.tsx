@@ -28,16 +28,31 @@ const RecapPage: React.FC<RecapPageProps> = ({ tasks, employees }) => {
       const matchType = filterType === 'All' || t.activityType === filterType;
       return matchName && matchUnit && matchType;
     }).sort((a, b) => {
-      // Sort by start date descending
-      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      const dateA = new Date(a.startDate).getTime();
+      const dateB = new Date(b.startDate).getTime();
+      return dateB - dateA;
     });
   }, [tasks, filterName, filterUnit, filterType]);
 
   const getTaskStatusBadge = (endDateStr: string) => {
-    const end = new Date(endDateStr);
+    if (!endDateStr) return null;
+    
+    // Parse date safely
+    let end: Date;
+    if (endDateStr.includes('-')) {
+      const [y, m, d] = endDateStr.split('-').map(Number);
+      end = new Date(y, m - 1, d);
+    } else if (endDateStr.includes('/')) {
+      const [d, m, y] = endDateStr.split('/').map(Number);
+      end = new Date(y, m - 1, d);
+    } else {
+      end = new Date(endDateStr);
+    }
+    
     end.setHours(23, 59, 59, 999);
     
-    const diffDays = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
       return (
@@ -54,10 +69,32 @@ const RecapPage: React.FC<RecapPageProps> = ({ tasks, employees }) => {
     } else {
       return (
         <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black uppercase border border-emerald-200">
-          <AlertCircle size={10} /> Masih Aktif
+          <AlertCircle size={10} /> Aktif
         </span>
       );
     }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "-";
+    let d: Date;
+    if (dateStr.includes('-')) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      d = new Date(year, month - 1, day);
+    } else if (dateStr.includes('/')) {
+      const [day, month, year] = dateStr.split('/').map(Number);
+      d = new Date(year, month - 1, day);
+    } else {
+      d = new Date(dateStr);
+    }
+    
+    if (isNaN(d.getTime())) return dateStr;
+
+    return d.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
   };
 
   return (
@@ -136,7 +173,7 @@ const RecapPage: React.FC<RecapPageProps> = ({ tasks, employees }) => {
                   <td className="px-10 py-6">
                     <p className="text-xs font-bold text-slate-700 leading-snug mb-1">{t.description}</p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
-                      {new Date(t.startDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})} s.d {new Date(t.endDate).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
+                      {formatDate(t.startDate)} s.d {formatDate(t.endDate)}
                     </p>
                   </td>
                   <td className="px-10 py-6">
@@ -149,7 +186,7 @@ const RecapPage: React.FC<RecapPageProps> = ({ tasks, employees }) => {
               {filteredRecap.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-10 py-20 text-center opacity-30 italic text-slate-500 font-black uppercase tracking-widest">
-                    Tidak ditemukan data penugasan aktif
+                    Tidak ditemukan data penugasan
                   </td>
                 </tr>
               )}

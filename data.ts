@@ -3,9 +3,15 @@ import { Employee, EmployeeStatus, AssignmentTask, ReportStatus, ReportDetails }
 
 declare const google: any;
 
-// ID Spreadsheet Baru sesuai instruksi
-const SPREADSHEET_ID = '1efjMOHknnC4RaYf9qTxPXGoLHSv5HelSMPYBqDi_y6s';
-const BASE_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
+/**
+ * KONFIGURASI MULTI-SPREADSHEET
+ */
+// 1. Spreadsheet Database Pegawai (Lama)
+const SPREADSHEET_PEGAWAI_ID = '1iB7Tdda08wD1u5IwiKUEjkfI2JFzw4wjTI_bGRhivVc';
+// 2. Spreadsheet Jadwal Penugasan (Baru)
+const SPREADSHEET_JADWAL_ID = '1efjMOHknnC4RaYf9qTxPXGoLHSv5HelSMPYBqDi_y6s';
+
+const getBaseUrl = (id: string) => `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv`;
 
 const parseCSV = (text: string) => {
   const rows: string[][] = [];
@@ -48,29 +54,29 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      rawData = await new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(reject)
-          .getSpreadsheetData();
-      });
-    } else {
-      const fetchSheet = async (name: string) => {
-        const res = await fetch(`${BASE_URL}&sheet=${encodeURIComponent(name)}`, { cache: 'no-store' });
-        return parseCSV(await res.text());
-      };
-      
-      // Menggunakan sheet 'Jadwal Tugas' sesuai instruksi
-      const [p, s, d, l] = await Promise.all([
-        fetchSheet('DATA_PEGAWAI'),
-        fetchSheet('Jadwal Tugas'),
-        fetchSheet('DISIPLIN_PEGAWAI'),
-        fetchSheet('LAPORAN_TUGAS')
-      ]);
-      rawData = { 'DATA_PEGAWAI': p, 'Jadwal Tugas': s, 'DISIPLIN_PEGAWAI': d, 'LAPORAN_TUGAS': l };
-    }
+    // Helper untuk fetch dari ID dan Sheet spesifik
+    const fetchSheet = async (spreadsheetId: string, sheetName: string) => {
+      const res = await fetch(`${getBaseUrl(spreadsheetId)}&sheet=${encodeURIComponent(sheetName)}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Gagal fetch ${sheetName}`);
+      return parseCSV(await res.text());
+    };
 
+    // Eksekusi penarikan data dari 2 Spreadsheet berbeda secara paralel
+    const [p, s, d, l] = await Promise.all([
+      fetchSheet(SPREADSHEET_PEGAWAI_ID, 'DATA_PEGAWAI'),
+      fetchSheet(SPREADSHEET_JADWAL_ID, 'Jadwal Tugas'),
+      fetchSheet(SPREADSHEET_PEGAWAI_ID, 'DISIPLIN_PEGAWAI'),
+      fetchSheet(SPREADSHEET_PEGAWAI_ID, 'LAPORAN_TUGAS')
+    ]);
+    
+    rawData = { 
+      'DATA_PEGAWAI': p, 
+      'Jadwal Tugas': s, 
+      'DISIPLIN_PEGAWAI': d, 
+      'LAPORAN_TUGAS': l 
+    };
+
+    // 1. PROSES DATA PEGAWAI (DARI SS LAMA)
     const employeesMap = new Map<string, Employee>();
     const rawPegawai = rawData['DATA_PEGAWAI'];
     if (rawPegawai && rawPegawai.length > 1) {
@@ -89,25 +95,29 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
       });
     }
 
+    // 2. PROSES JADWAL TUGAS (DARI SS BARU)
     const tasksMap = new Map<string, AssignmentTask>();
     const rawSurat = rawData['Jadwal Tugas'];
     if (rawSurat && rawSurat.length > 1) {
       rawSurat.slice(1).forEach((row: any[]) => {
         const nip = String(row[0]);
-        const letterNum = row[2]; // Nomor Surat di kolom C (index 2)
+        const letterNum = row[2]; // Nomor Surat (Kolom C)
+        
         if (!nip || !letterNum) return;
 
-        const jenisPenugasan = row[3] || 'Luring'; // Jenis Penugasan di kolom D (index 3)
-        const namaKegiatan = row[4] || '-'; // Nama Kegiatan di kolom E (index 4)
-        const lokasi = row[5] || '-'; // Lokasi di kolom F
-        const tglMulai = String(row[6]); // Tanggal Mulai di kolom G
-        const tglSelesai = String(row[7]); // Tanggal Selesai di kolom H
-        const signee = row[8] || '-'; // Penandatangan di kolom I
+        const jenisPenugasan = row[3] || 'Luring'; // Jenis (Kolom D)
+        const namaKegiatan = row[4] || '-'; // Kegiatan (Kolom E)
+        const lokasi = row[5] || '-'; // Lokasi (Kolom F)
+        const tglMulai = String(row[6]); // Mulai (Kolom G)
+        const tglSelesai = String(row[7]); // Selesai (Kolom H)
+        const signee = row[8] || '-'; // Penandatangan (Kolom I)
 
         const start = parseDateSafely(tglMulai);
         const end = parseDateSafely(tglSelesai);
         
         const emp = employeesMap.get(nip);
+        
+        // Update status keberadaan pegawai secara real-time
         if (emp && start && end) {
           const startTime = new Date(start).setHours(0,0,0,0);
           const endTime = new Date(end).setHours(23,59,59,999);
@@ -119,7 +129,9 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
 
         if (tasksMap.has(letterNum)) {
           const existing = tasksMap.get(letterNum)!;
-          if (emp && !existing.employees.find(e => e.nip === nip)) existing.employees.push(emp);
+          if (emp && !existing.employees.find(e => e.nip === nip)) {
+            existing.employees.push(emp);
+          }
         } else {
           tasksMap.set(letterNum, {
             id: `task-${letterNum}`,
@@ -130,7 +142,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
             startDate: tglMulai,
             endDate: tglSelesai,
             signee: signee,
-            employees: emp ? [emp] : [],
+            employees: emp ? [emp] : [], // Jika NIP ada di SS baru tapi tak ada di SS lama, list akan kosong (bisa ditangani di UI)
             activityType: jenisPenugasan as any,
             reportStatus: ReportStatus.PENDING,
             documentationPhotos: []
@@ -139,7 +151,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
       });
     }
 
-    // Load Disiplin & Laporan (tetap agar fungsionalitas lain tidak rusak)
+    // 3. PROSES DISIPLIN (DARI SS LAMA)
     const rawDisiplin = rawData['DISIPLIN_PEGAWAI'];
     if (rawDisiplin && rawDisiplin.length > 1) {
       rawDisiplin.slice(1).forEach((row: any[]) => {
@@ -162,6 +174,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
     };
   } catch (error) {
     console.error('Sync Error:', error);
+    // Return empty but consistent data if failed
     return { employees: [], tasks: [] };
   }
 };
