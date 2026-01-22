@@ -6,8 +6,19 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
+    host: true,
   },
   build: {
     outDir: 'dist',
-  }
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'ui-icons': ['lucide-react'],
+        },
+      },
+    },
+  },
 });
