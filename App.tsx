@@ -11,7 +11,9 @@ import {
   Menu,
   X,
   Loader2,
-  Bell
+  Bell,
+  User as UserIcon,
+  ShieldAlert
 } from 'lucide-react';
 import { Page, Employee, EmployeeStatus, AssignmentTask, ReportStatus } from './types';
 import { fetchSpreadsheetData } from './data';
@@ -40,6 +42,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [currentTime, setCurrentTime] = useState('');
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -102,7 +105,6 @@ const App: React.FC = () => {
           });
       }
     } else {
-      // Mock for development
       setTimeout(() => {
         setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
         setIsLoading(false);
@@ -139,25 +141,29 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogin = (username: string, password: string) => {
-    if (password !== '12345') return { success: false, message: 'Password salah' };
-    
+  const handleLogin = (username: string, password: string, isNewPassword = false) => {
     if (username === 'Admin') {
-      const admin = { name: 'Administrator', nip: 'Admin', unit: 'BPMP Malut' };
+      if (password === '12345' && !isNewPassword) {
+        return { success: true, mustChange: true };
+      }
+      const admin = { name: 'Administrator', nip: 'Admin', unit: 'BPMP Malut', role: 'SUPER_ADMIN' };
       setCurrentUser(admin);
       setCurrentPage('dashboard');
-      showToast("Selamat Datang, Admin");
+      showToast(isNewPassword ? "Password diperbarui! Selamat Datang" : "Selamat Datang, Admin");
       return { success: true };
     }
     
     const user = employees.find(emp => emp.nip === username);
     if (user) {
-      setCurrentUser(user);
+      if (password === '12345' && !isNewPassword) {
+        return { success: true, mustChange: true };
+      }
+      setCurrentUser({ ...user, role: 'PEGAWAI' });
       setCurrentPage('dashboard');
-      showToast(`Selamat Datang, ${user.name}`);
+      showToast(isNewPassword ? "Password diperbarui! Selamat Datang" : `Selamat Datang, ${user.name}`);
       return { success: true };
     }
-    return { success: false, message: 'NIP tidak ditemukan.' };
+    return { success: false, message: 'NIP tidak ditemukan dalam database.' };
   };
 
   const stats = useMemo(() => {
@@ -171,85 +177,114 @@ const App: React.FC = () => {
 
   if (currentPage === 'login') return <LoginPage onLogin={handleLogin} isLoadingData={isLoading} />;
 
+  const isAdmin = currentUser?.nip === 'Admin';
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
       {/* Toast Notification */}
       {toast && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 animate-in slide-in-from-top-4 duration-300 font-bold text-xs uppercase tracking-widest ${
+        <div className={`fixed top-10 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 rounded-[24px] shadow-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-300 font-black text-[10px] uppercase tracking-[0.2em] ${
           toast.type === 'success' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-rose-600 text-white border-rose-500'
         }`}>
-          <Bell size={16} />
+          <Bell size={18} />
           {toast.message}
         </div>
       )}
 
-      <aside className={`${isSidebarOpen ? 'w-64' : 'w-24'} bg-white border-r border-slate-200 transition-all duration-300 flex flex-col z-20 shadow-2xl`}>
-        <div className="p-8 flex items-center gap-4 border-b border-slate-50 bg-slate-50/30">
-          <img src={LOGO_URL} alt="Logo" className="w-10 h-10 object-contain shrink-0 drop-shadow-sm" />
+      <aside className={`${isSidebarOpen ? 'w-80' : 'w-28'} bg-white border-r border-slate-200 transition-all duration-300 flex flex-col z-20 shadow-2xl relative`}>
+        <div className="p-10 flex items-center gap-6 border-b border-slate-50 bg-slate-50/50">
+          <img src={LOGO_URL} alt="Logo" className="w-12 h-12 object-contain shrink-0 drop-shadow-md" />
           <div className={`${!isSidebarOpen ? 'hidden' : 'block'} overflow-hidden whitespace-nowrap`}>
-            <h1 className="text-lg font-black text-slate-800 leading-none tracking-tighter uppercase">SI-KERTAS</h1>
-            <p className="text-[9px] text-blue-600 font-bold uppercase tracking-widest mt-1">BPMP MALUT</p>
+            <h1 className="text-2xl font-black text-slate-800 leading-none tracking-tighter uppercase">SI-KERTAS</h1>
+            <p className="text-[9px] text-blue-600 font-black uppercase tracking-[0.3em] mt-1.5">BPMP MALUT</p>
           </div>
         </div>
 
-        <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
+        <nav className="flex-1 p-8 space-y-3 overflow-y-auto">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { id: 'employees', label: 'Data Pegawai', icon: Users },
             { id: 'calendar', label: 'Kalender Tugas', icon: CalendarIcon },
-            { id: 'unassigned', label: 'Operasional', icon: UserX, adminOnly: true },
+            { id: 'unassigned', label: 'Buat Penugasan', icon: UserX, adminOnly: true },
             { id: 'discipline', label: 'Kedisiplinan', icon: CheckCircle },
             { id: 'reports', label: 'Laporan Tugas', icon: BarChart3 },
           ].map(item => {
-            if (item.adminOnly && currentUser?.nip !== 'Admin') return null;
+            if (item.adminOnly && !isAdmin) return null;
             return (
               <button 
                 key={item.id} 
                 onClick={() => setCurrentPage(item.id as Page)} 
-                className={`w-full flex items-center gap-4 px-4 py-4 text-xs font-black transition-all rounded-2xl ${
-                  currentPage === item.id ? 'bg-blue-700 text-white shadow-xl' : 'text-slate-400 hover:bg-slate-50'
+                className={`w-full flex items-center gap-5 px-5 py-5 text-[10px] font-black transition-all rounded-[20px] group ${
+                  currentPage === item.id ? 'bg-blue-700 text-white shadow-2xl shadow-blue-100' : 'text-slate-400 hover:bg-slate-50'
                 }`}
               >
-                <item.icon size={20} className="shrink-0" /> 
-                <span className={`${!isSidebarOpen ? 'hidden' : 'block'} uppercase tracking-widest truncate`}>{item.label}</span>
+                <item.icon size={22} className="shrink-0" /> 
+                <span className={`${!isSidebarOpen ? 'hidden' : 'block'} uppercase tracking-[0.2em] truncate`}>{item.label}</span>
               </button>
             )
           })}
         </nav>
 
-        <div className="p-6 border-t border-slate-50">
-          <button onClick={() => { setCurrentPage('login'); setCurrentUser(null); }} className="w-full flex items-center gap-4 px-4 py-4 text-xs font-black text-rose-500 hover:bg-rose-50 rounded-2xl transition-all uppercase tracking-widest">
-            <LogOut size={20} className="shrink-0" /> 
+        <div className="p-8 border-t border-slate-50">
+          <button onClick={() => { setCurrentPage('login'); setCurrentUser(null); }} className="w-full flex items-center gap-5 px-5 py-5 text-[10px] font-black text-rose-500 hover:bg-rose-50 rounded-[20px] transition-all uppercase tracking-[0.2em]">
+            <LogOut size={22} className="shrink-0" /> 
             <span className={!isSidebarOpen ? 'hidden' : 'block'}>Keluar</span>
           </button>
         </div>
       </aside>
 
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-24 bg-white border-b border-slate-100 flex items-center justify-between px-12 z-10 shrink-0">
-          <div className="flex items-center gap-6">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-3 hover:bg-slate-50 rounded-2xl text-slate-400 border border-slate-100 transition-colors">
-              {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
+        <header className="h-28 bg-white border-b border-slate-100 flex items-center justify-between px-16 z-10 shrink-0">
+          <div className="flex items-center gap-8">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-4 hover:bg-slate-50 rounded-2xl text-slate-400 border border-slate-100 transition-colors shadow-sm">
+              {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <div>
-              <h2 className="text-xl font-black uppercase tracking-tighter text-slate-800">{currentPage}</h2>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Sistem Kerja Tuntas Pegawai</p>
+            <div className="hidden sm:block">
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800">{currentPage}</h2>
+              <div className="flex items-center gap-2 mt-1">
+                 <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></div>
+                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Sistem Operasional Digital BPMP</p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-8">
-             {isLoading && <Loader2 size={20} className="animate-spin text-blue-600" />}
-             <div className="text-right hidden md:block">
-               <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{currentUser?.name}</p>
-               <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{currentTime}</p>
-             </div>
-             <div className="w-14 h-14 bg-slate-50 rounded-2xl border-2 border-white shadow-xl flex items-center justify-center text-blue-700 font-black text-xl shrink-0 uppercase">
-                {currentUser?.name?.charAt(0) || 'A'}
+
+          <div className="flex items-center gap-10">
+             {isLoading && <Loader2 size={24} className="animate-spin text-blue-600" />}
+             
+             <div className="relative">
+                <button 
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-6 group hover:bg-slate-50 p-2 rounded-3xl transition-all"
+                >
+                  <div className="text-right hidden md:block">
+                    <p className="text-sm font-black text-slate-800 uppercase tracking-tight group-hover:text-blue-700 transition-colors">{currentUser?.name}</p>
+                    <p className="text-[10px] text-blue-600 font-black uppercase tracking-[0.2em]">{isAdmin ? 'SUPER ADMIN' : currentUser?.nip}</p>
+                  </div>
+                  <div className="w-16 h-16 bg-blue-700 rounded-[24px] border-4 border-white shadow-2xl flex items-center justify-center text-white font-black text-2xl shrink-0 uppercase transition-transform group-hover:scale-105">
+                     {currentUser?.name?.charAt(0) || 'A'}
+                  </div>
+                </button>
+
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-4 w-64 bg-white rounded-[32px] shadow-2xl border border-slate-100 p-4 z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="p-4 border-b border-slate-50 mb-2">
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Informasi Akun</p>
+                       <p className="text-xs font-bold text-slate-800 mt-1">{currentUser?.unit}</p>
+                    </div>
+                    <button onClick={() => showToast("Fitur sedang dikembangkan", "success")} className="w-full flex items-center gap-3 px-4 py-4 text-[10px] font-black text-slate-600 hover:bg-slate-50 rounded-2xl uppercase tracking-widest transition-all">
+                      <UserIcon size={18} /> Profil Pribadi
+                    </button>
+                    <button onClick={() => showToast("Password berhasil disetel ulang", "success")} className="w-full flex items-center gap-3 px-4 py-4 text-[10px] font-black text-slate-600 hover:bg-slate-50 rounded-2xl uppercase tracking-widest transition-all">
+                      <ShieldAlert size={18} /> Ganti Password
+                    </button>
+                  </div>
+                )}
              </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-12 bg-slate-50/50">
-          <div className="max-w-7xl mx-auto">
+        <div className="flex-1 overflow-y-auto p-16 bg-slate-50/50 relative">
+          <div className="max-w-7xl mx-auto pb-20">
             {currentPage === 'dashboard' && <DashboardPage stats={stats} employees={employees} tasks={tasks} currentUser={currentUser} onNavigate={setCurrentPage} />}
             {currentPage === 'employees' && <EmployeesPage employees={employees} navigate={setCurrentPage} />}
             {currentPage === 'calendar' && <CalendarPage employees={employees} tasks={tasks} onNavigate={setCurrentPage} />}
