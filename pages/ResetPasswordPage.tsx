@@ -14,9 +14,7 @@ import {
   History, 
   CheckCircle2, 
   X, 
-  AlertTriangle,
-  Filter,
-  ArrowRightCircle
+  Filter
 } from 'lucide-react';
 
 interface ResetPasswordPageProps {
@@ -27,7 +25,6 @@ interface ResetPasswordPageProps {
 
 const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ employees, currentUser, onUpdateEmployee }) => {
   const isSuperAdmin = currentUser?.role === UserRole.SUPER_ADMIN;
-  const isAdminTim = currentUser?.role === UserRole.ADMIN_TIM;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUnit, setSelectedUnit] = useState('All');
@@ -114,7 +111,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ employees, curren
         >
           <History size={18} /> Riwayat Audit
         </button>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-20 -mt-20 opacity-50"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-100 rounded-full blur-3xl -mr-20 -mt-20 opacity-30"></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -161,7 +158,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ employees, curren
                       <td className="px-10 py-6">
                         <div className="flex items-center gap-4">
                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs ${
-                            emp.accountStatus === AccountStatus.LOCKED ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-700'
+                            emp.accountStatus === AccountStatus.LOCKED ? 'bg-slate-200 text-slate-500' : 'bg-slate-100 text-slate-700'
                           }`}>
                             {emp.name.charAt(0)}
                           </div>
@@ -213,37 +210,37 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ employees, curren
         </div>
 
         <div className="space-y-6">
-          <div className="bg-blue-700 p-10 rounded-[40px] text-white shadow-2xl shadow-blue-100 relative overflow-hidden">
-            <h4 className="text-xl font-black uppercase tracking-tighter mb-4 relative z-10">Pusat Keamanan</h4>
+          <div className="bg-slate-800 p-10 rounded-[40px] text-white shadow-2xl shadow-slate-200 relative overflow-hidden">
+            <h4 className="text-xl font-black uppercase tracking-tighter mb-4 relative z-10">Pusat Keamanan Akun</h4>
             <div className="space-y-4 relative z-10">
               <div className="p-4 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-sm">
-                <p className="text-[9px] font-black uppercase tracking-widest text-blue-200">Total Akun</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-300">Total Akun</p>
                 <p className="text-2xl font-black">{employees.length}</p>
               </div>
               <div className="p-4 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-sm">
-                <p className="text-[9px] font-black uppercase tracking-widest text-rose-200">Akun Terkunci</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-rose-300">Akun Terkunci</p>
                 <p className="text-2xl font-black">{employees.filter(e => e.accountStatus === AccountStatus.LOCKED).length}</p>
               </div>
             </div>
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
           </div>
 
           <div className="bg-white p-8 rounded-[40px] border border-slate-200 shadow-sm">
              <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
-               <ShieldAlert size={16} className="text-amber-500" /> Aturan Reset
+               <ShieldAlert size={16} className="text-amber-500" /> Aturan Reset Sistem
              </h5>
              <ul className="space-y-4 text-[11px] font-medium text-slate-600 leading-relaxed">
                <li className="flex gap-3">
-                 <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0"></div>
-                 <span>Password default hasil reset adalah <b>12345</b></span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 shrink-0"></div>
+                 <span>Password default hasil reset otomatis menjadi <b>12345</b></span>
                </li>
                <li className="flex gap-3">
-                 <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0"></div>
-                 <span>Status akun akan berubah menjadi <b>Wajib Ganti Password</b></span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 shrink-0"></div>
+                 <span>Status akun berubah menjadi <b>Wajib Ganti Password</b> saat login pertama</span>
                </li>
                <li className="flex gap-3">
-                 <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0"></div>
-                 <span>Seluruh aktivitas reset dicatat dalam <b>Audit Trail</b></span>
+                 <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 shrink-0"></div>
+                 <span>Seluruh aktivitas reset dicatat permanen dalam <b>Audit Trail</b> sistem</span>
                </li>
              </ul>
           </div>
@@ -255,26 +252,26 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ employees, curren
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xl z-[150] flex items-center justify-center p-4">
           <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-in zoom-in duration-300">
              <div className="p-10 text-center">
-                <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-blue-100">
-                   <KeyRound size={48} className="text-blue-700" />
+                <div className="w-24 h-24 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-slate-100">
+                   <KeyRound size={48} className="text-slate-700" />
                 </div>
                 <h4 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Konfirmasi Reset</h4>
-                <p className="text-slate-500 text-sm mt-3 px-8">Anda akan mereset password akun <b>{confirmModal.name}</b> menjadi <b>12345</b>. Tindakan ini tidak dapat dibatalkan.</p>
+                <p className="text-slate-500 text-sm mt-3 px-8">Anda akan mereset password akun <b>{confirmModal.name}</b>. Pegawai wajib mengganti password pada login berikutnya.</p>
                 
                 <div className="mt-8 text-left space-y-2">
-                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Alasan Reset (Opsional)</label>
+                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Alasan Reset (Audit Trail)</label>
                    <input 
                     type="text" 
                     value={resetReason}
                     onChange={(e) => setResetReason(e.target.value)}
-                    placeholder="Contoh: Lupa password / Permintaan pribadi"
-                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-600"
+                    placeholder="Contoh: Permintaan Lupa Password"
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-600"
                    />
                 </div>
              </div>
              <div className="p-8 bg-slate-50 flex gap-4">
                 <button onClick={() => setConfirmModal(null)} className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">Batal</button>
-                <button onClick={handleReset} className="flex-1 py-4 bg-blue-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-800 transition-all">Reset Password</button>
+                <button onClick={handleReset} className="flex-1 py-4 bg-slate-800 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-100 hover:bg-slate-900 transition-all">Eksekusi Reset</button>
              </div>
           </div>
         </div>
@@ -287,15 +284,15 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ employees, curren
           <div className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
             <div className="p-10 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h4 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Audit Trail</h4>
-                <p className="text-[9px] text-blue-600 font-black uppercase tracking-widest mt-1">Riwayat Reset Password</p>
+                <h4 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Riwayat Audit Trail</h4>
+                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-1">Log Keamanan Reset Password</p>
               </div>
-              <button onClick={() => setShowHistory(false)} className="p-3 hover:bg-slate-50 rounded-full text-slate-400"><X size={24} /></button>
+              <button onClick={() => setShowHistory(false)} className="p-3 hover:bg-slate-50 rounded-full text-slate-400 transition-colors"><X size={24} /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-10 space-y-6">
               {resetLogs.length > 0 ? resetLogs.map((log, idx) => (
-                <div key={idx} className="p-6 bg-slate-50 rounded-[28px] border border-slate-100 flex gap-5 group hover:border-blue-200 transition-all">
-                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-700 shadow-sm border border-slate-100 group-hover:bg-blue-700 group-hover:text-white transition-all">
+                <div key={idx} className="p-6 bg-slate-50 rounded-[28px] border border-slate-100 flex gap-5 group hover:border-slate-300 transition-all">
+                   <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-700 shadow-sm border border-slate-100 group-hover:bg-slate-800 group-hover:text-white transition-all">
                       <History size={20} />
                    </div>
                    <div className="flex-1">
@@ -305,15 +302,15 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ employees, curren
                       </div>
                       <p className="text-[10px] text-slate-500 mb-3">Password direset oleh <b>{log.adminName}</b></p>
                       <div className="p-3 bg-white/50 rounded-xl border border-slate-200">
-                         <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Alasan:</p>
+                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Alasan Penyetelan:</p>
                          <p className="text-[11px] font-medium text-slate-600 italic">"{log.reason}"</p>
                       </div>
                    </div>
                 </div>
               )) : (
                 <div className="h-full flex flex-col items-center justify-center opacity-30 text-center px-10">
-                   <CheckCircle2 size={64} className="mb-6" />
-                   <p className="text-xs font-black uppercase tracking-widest">Belum ada riwayat reset tercatat dalam sesi ini.</p>
+                   <CheckCircle2 size={64} className="mb-6 text-slate-300" />
+                   <p className="text-xs font-black uppercase tracking-widest text-slate-400">Belum ada riwayat aktivitas reset password tercatat.</p>
                 </div>
               )}
             </div>

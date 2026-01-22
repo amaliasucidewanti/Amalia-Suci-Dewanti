@@ -14,9 +14,7 @@ import {
   Bell,
   User as UserIcon,
   ShieldAlert,
-  Settings,
-  KeyRound,
-  History
+  KeyRound
 } from 'lucide-react';
 import { Page, Employee, EmployeeStatus, AssignmentTask, ReportStatus, UserRole, AccountStatus } from './types';
 import { fetchSpreadsheetData } from './data';
@@ -56,7 +54,6 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await fetchSpreadsheetData();
-      // Initialize mock account statuses for display
       const empsWithStatus = data.employees.map(e => ({
         ...e,
         accountStatus: e.accountStatus || AccountStatus.ACTIVE
@@ -128,7 +125,6 @@ const App: React.FC = () => {
   const handleLogin = (username: string, password: string, isNewPassword = false) => {
     const adminUsernames = ['Admin', 'timkerpaud', 'timkersd', 'timkersmp', 'timkersma', 'subbagumum'];
     
-    // Super Admin
     if (username === 'Admin') {
       if (password === '12345' && !isNewPassword) {
         return { success: true, mustChange: true };
@@ -139,7 +135,6 @@ const App: React.FC = () => {
       return { success: true };
     }
     
-    // Admin Tim Kerja
     if (adminUsernames.includes(username)) {
       if (password === '12345' && !isNewPassword) {
         return { success: true, mustChange: true };
@@ -157,7 +152,6 @@ const App: React.FC = () => {
       return { success: true };
     }
 
-    // Pegawai
     const user = employees.find(emp => emp.nip === username);
     if (user) {
       if (password === '12345' && !isNewPassword) {
@@ -174,7 +168,7 @@ const App: React.FC = () => {
   const stats = useMemo(() => {
     const assigned = employees.filter(e => e.status === EmployeeStatus.ASSIGNED).length;
     const unassigned = employees.filter(e => e.status === EmployeeStatus.UNASSIGNED).length;
-    const avg = employees.length ? employees.reduce((a, c) => a + (c.disciplineScore?.final || 0), 0) / employees.length : 0;
+    const avg = employees.length ? employees.reduce((acc, curr) => acc + (curr.disciplineScore?.final || 0), 0) / employees.length : 0;
     return { assigned, unassigned, activeSurat: tasks.length, avgDiscipline: avg };
   }, [employees, tasks]);
 
@@ -195,7 +189,7 @@ const App: React.FC = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
+    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900 font-sans">
       {toast && (
         <div className={`fixed top-10 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 rounded-[24px] shadow-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-300 font-black text-[10px] uppercase tracking-[0.2em] ${
           toast.type === 'success' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-rose-600 text-white border-rose-500'
@@ -302,9 +296,14 @@ const App: React.FC = () => {
             {currentPage === 'preview' && activeTask && <PreviewPage task={activeTask} onBack={() => setCurrentPage('form')} onSave={handleSaveAssignment} />}
             {currentPage === 'discipline' && <DisciplinePage employees={employees} />}
             {currentPage === 'reports' && <ReportsPage tasks={tasks} currentUser={currentUser} onUpdateTask={handleUpdateTask} />}
-            {currentPage === 'reset-password' && <ResetPasswordPage employees={employees} currentUser={currentUser} onUpdateEmployee={(e) => {
-              setEmployees(prev => prev.map(emp => emp.nip === e.nip ? { ...emp, ...e } : emp));
-              showToast(`Password ${e.name} berhasil direset`, "success");
+            {currentPage === 'reset-password' && <ResetPasswordPage employees={employees} currentUser={currentUser} onUpdateEmployee={(update) => {
+              const target = employees.find(emp => emp.nip === update.nip);
+              setEmployees(prev => prev.map(emp => emp.nip === update.nip ? { ...emp, ...update } : emp));
+              if (update.accountStatus === AccountStatus.MUST_CHANGE) {
+                showToast(`Password ${target?.name || update.nip} berhasil direset`, "success");
+              } else {
+                showToast(`Status akun ${target?.name || update.nip} diperbarui`, "success");
+              }
             }} />}
           </div>
         </div>
