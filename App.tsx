@@ -127,16 +127,20 @@ const App: React.FC = () => {
   const handleLogin = (username: string, password: string, isNewPassword = false) => {
     const adminUsernames = ['Admin', 'timkerpaud', 'timkersd', 'timkersmp', 'timkersma', 'subbagumum'];
     
+    // Logika Khusus Akun Admin Utama
     if (username === 'Admin') {
-      if (password === '12345' && !isNewPassword) {
-        return { success: true, mustChange: true };
+      if (password === '12345') {
+        setCurrentUser({ name: 'Super Administrator', nip: 'Admin', unit: 'BPMP Maluku Utara', role: UserRole.SUPER_ADMIN });
+        setCurrentPage('dashboard');
+        showToast("Selamat Datang, Super Admin");
+        return { success: true };
       }
-      setCurrentUser({ name: 'Super Administrator', nip: 'Admin', unit: 'BPMP Maluku Utara', role: UserRole.SUPER_ADMIN });
-      setCurrentPage('dashboard');
-      showToast(isNewPassword ? "Password diperbarui!" : "Selamat Datang, Super Admin");
-      return { success: true };
+      // Jika password salah (bukan 12345), maka gagal (karena admin tidak wajib ganti password, 12345 adalah kuncinya)
+      // Catatan: Jika Anda sudah mengubah password Admin di database, sesuaikan logika ini
+      return { success: false, message: 'Password Admin salah.' };
     }
     
+    // Logika untuk Admin Tim Kerja
     if (adminUsernames.includes(username)) {
       if (password === '12345' && !isNewPassword) {
         return { success: true, mustChange: true };
@@ -150,10 +154,11 @@ const App: React.FC = () => {
       };
       setCurrentUser({ name: `Admin ${unitMap[username] || 'Tim Kerja'}`, nip: username, unit: unitMap[username] || 'Tim Kerja', role: UserRole.ADMIN_TIM });
       setCurrentPage('dashboard');
-      showToast("Selamat Datang, Admin Tim");
+      showToast(isNewPassword ? "Password Admin Tim diperbarui!" : "Selamat Datang, Admin Tim");
       return { success: true };
     }
 
+    // Logika untuk Pegawai Umum
     const user = employees.find(emp => emp.nip === username);
     if (user) {
       if (password === '12345' && !isNewPassword) {

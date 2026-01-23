@@ -4,12 +4,10 @@ import { Employee, EmployeeStatus, AssignmentTask, ReportStatus, ReportDetails }
 declare const google: any;
 
 /**
- * KONFIGURASI MULTI-SPREADSHEET
+ * KONFIGURASI SINGLE SPREADSHEET
+ * Menggunakan satu ID untuk seluruh database aplikasi
  */
-// 1. Spreadsheet Database Pegawai (Lama)
-const SPREADSHEET_PEGAWAI_ID = '1iB7Tdda08wD1u5IwiKUEjkfI2JFzw4wjTI_bGRhivVc';
-// 2. Spreadsheet Jadwal Penugasan (Baru)
-const SPREADSHEET_JADWAL_ID = '1efjMOHknnC4RaYf9qTxPXGoLHSv5HelSMPYBqDi_y6s';
+const SPREADSHEET_ID = '1iB7Tdda08wD1u5IwiKUEjkfI2JFzw4wjTI_bGRhivVc';
 
 const getBaseUrl = (id: string) => `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv`;
 
@@ -50,33 +48,32 @@ const parseDateSafely = (dateStr: string) => {
 
 export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], tasks: AssignmentTask[] }> => {
   try {
-    let rawData: any;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Helper untuk fetch dari ID dan Sheet spesifik
-    const fetchSheet = async (spreadsheetId: string, sheetName: string) => {
-      const res = await fetch(`${getBaseUrl(spreadsheetId)}&sheet=${encodeURIComponent(sheetName)}`, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`Gagal fetch ${sheetName}`);
+    // Helper untuk fetch dari Sheet spesifik dalam Spreadsheet yang sama
+    const fetchSheet = async (sheetName: string) => {
+      const res = await fetch(`${getBaseUrl(SPREADSHEET_ID)}&sheet=${encodeURIComponent(sheetName)}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Gagal fetch sheet: ${sheetName}`);
       return parseCSV(await res.text());
     };
 
-    // Eksekusi penarikan data dari 2 Spreadsheet berbeda secara paralel
+    // Eksekusi penarikan data dari 4 Sheet berbeda secara paralel
     const [p, s, d, l] = await Promise.all([
-      fetchSheet(SPREADSHEET_PEGAWAI_ID, 'DATA_PEGAWAI'),
-      fetchSheet(SPREADSHEET_JADWAL_ID, 'Jadwal Tugas'),
-      fetchSheet(SPREADSHEET_PEGAWAI_ID, 'DISIPLIN_PEGAWAI'),
-      fetchSheet(SPREADSHEET_PEGAWAI_ID, 'LAPORAN_TUGAS')
+      fetchSheet('DATA_PEGAWAI'),
+      fetchSheet('SURAT_TUGAS'),
+      fetchSheet('DISIPLIN_PEGAWAI'),
+      fetchSheet('LAPORAN_TUGAS')
     ]);
     
-    rawData = { 
+    const rawData = { 
       'DATA_PEGAWAI': p, 
-      'Jadwal Tugas': s, 
+      'SURAT_TUGAS': s, 
       'DISIPLIN_PEGAWAI': d, 
       'LAPORAN_TUGAS': l 
     };
 
-    // 1. PROSES DATA PEGAWAI (DARI SS LAMA)
+    // 1. PROSES DATA PEGAWAI
     const employeesMap = new Map<string, Employee>();
     const rawPegawai = rawData['DATA_PEGAWAI'];
     if (rawPegawai && rawPegawai.length > 1) {
@@ -95,22 +92,21 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
       });
     }
 
-    // 2. PROSES JADWAL TUGAS (DARI SS BARU)
+    // 2. PROSES SURAT TUGAS (Jadwal)
     const tasksMap = new Map<string, AssignmentTask>();
-    const rawSurat = rawData['Jadwal Tugas'];
+    const rawSurat = rawData['SURAT_TUGAS'];
     if (rawSurat && rawSurat.length > 1) {
       rawSurat.slice(1).forEach((row: any[]) => {
         const nip = String(row[0]);
-        const letterNum = row[2]; // Nomor Surat (Kolom C)
+        const letterNum = row[1]; // Penyesuaian Index: NIP (0), No Surat (1), Basis (2), Kegiatan (3), Lokasi (4), Mulai (5), Selesai (6), Signee (7)
         
         if (!nip || !letterNum) return;
 
-        const jenisPenugasan = row[3] || 'Luring'; // Jenis (Kolom D)
-        const namaKegiatan = row[4] || '-'; // Kegiatan (Kolom E)
-        const lokasi = row[5] || '-'; // Lokasi (Kolom F)
-        const tglMulai = String(row[6]); // Mulai (Kolom G)
-        const tglSelesai = String(row[7]); // Selesai (Kolom H)
-        const signee = row[8] || '-'; // Penandatangan (Kolom I)
+        const description = row[3] || '-';
+        const location = row[4] || '-';
+        const tglMulai = String(row[5]);
+        const tglSelesai = String(row[6]);
+        const signee = row[7] || '-';
 
         const start = parseDateSafely(tglMulai);
         const end = parseDateSafely(tglSelesai);
@@ -123,7 +119,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
           const endTime = new Date(end).setHours(23,59,59,999);
           if (today.getTime() >= startTime && today.getTime() <= endTime) {
             emp.status = EmployeeStatus.ASSIGNED;
-            (emp as any).activeActivity = namaKegiatan;
+            (emp as any).activeActivity = description;
           }
         }
 
@@ -136,14 +132,14 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
           tasksMap.set(letterNum, {
             id: `task-${letterNum}`,
             letterNumber: letterNum,
-            basis: '-',
-            description: namaKegiatan,
-            location: lokasi,
+            basis: row[2] || '-',
+            description: description,
+            location: location,
             startDate: tglMulai,
             endDate: tglSelesai,
             signee: signee,
-            employees: emp ? [emp] : [], // Jika NIP ada di SS baru tapi tak ada di SS lama, list akan kosong (bisa ditangani di UI)
-            activityType: jenisPenugasan as any,
+            employees: emp ? [emp] : [],
+            activityType: (row[3]?.toLowerCase().includes('daring') ? 'Daring' : 'Luring') as any,
             reportStatus: ReportStatus.PENDING,
             documentationPhotos: []
           });
@@ -151,7 +147,34 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
       });
     }
 
-    // 3. PROSES DISIPLIN (DARI SS LAMA)
+    // 3. PROSES DATA LAPORAN (Untuk mencocokkan status tugas yang sudah lapor)
+    const rawLaporan = rawData['LAPORAN_TUGAS'];
+    if (rawLaporan && rawLaporan.length > 1) {
+      rawLaporan.slice(1).forEach((row: any[]) => {
+        const letterNum = String(row[0]);
+        const nip = String(row[3]);
+        const task = tasksMap.get(letterNum);
+        if (task) {
+          task.reportStatus = ReportStatus.SUBMITTED;
+          task.reportDate = String(row[2]);
+          task.reportCreatorNip = nip;
+          try {
+            task.reportDetails = JSON.parse(row[1]);
+          } catch (e) {
+            task.reportSummary = row[1];
+          }
+          if (row[4]) {
+            try {
+              task.documentationPhotos = JSON.parse(row[4]);
+            } catch (e) {
+              task.reportFileUrl = row[4];
+            }
+          }
+        }
+      });
+    }
+
+    // 4. PROSES DISIPLIN
     const rawDisiplin = rawData['DISIPLIN_PEGAWAI'];
     if (rawDisiplin && rawDisiplin.length > 1) {
       rawDisiplin.slice(1).forEach((row: any[]) => {
@@ -174,7 +197,6 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
     };
   } catch (error) {
     console.error('Sync Error:', error);
-    // Return empty but consistent data if failed
     return { employees: [], tasks: [] };
   }
 };
