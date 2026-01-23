@@ -4,8 +4,8 @@ import { Employee, EmployeeStatus, AssignmentTask, ReportStatus, ReportDetails }
 declare const google: any;
 
 /**
- * KONFIGURASI SINGLE SPREADSHEET
- * Menggunakan satu ID untuk seluruh database aplikasi
+ * KONFIGURASI SINGLE SPREADSHEET TERKUNCI
+ * ID: 1iB7Tdda08wD1u5IwiKUEjkfI2JFzw4wjTI_bGRhivVc
  */
 const SPREADSHEET_ID = '1iB7Tdda08wD1u5IwiKUEjkfI2JFzw4wjTI_bGRhivVc';
 
@@ -35,7 +35,6 @@ const parseCSV = (text: string) => {
 
 const parseDateSafely = (dateStr: string) => {
   if (!dateStr) return null;
-  // Handle formats like YYYY-MM-DD or DD/MM/YYYY
   if (dateStr.includes('-')) {
     const [y, m, d] = dateStr.split('-').map(Number);
     return new Date(y, m - 1, d);
@@ -51,14 +50,12 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Helper untuk fetch dari Sheet spesifik dalam Spreadsheet yang sama
     const fetchSheet = async (sheetName: string) => {
       const res = await fetch(`${getBaseUrl(SPREADSHEET_ID)}&sheet=${encodeURIComponent(sheetName)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`Gagal fetch sheet: ${sheetName}`);
       return parseCSV(await res.text());
     };
 
-    // Eksekusi penarikan data dari 4 Sheet berbeda secara paralel
     const [p, s, d, l] = await Promise.all([
       fetchSheet('DATA_PEGAWAI'),
       fetchSheet('SURAT_TUGAS'),
@@ -92,28 +89,29 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
       });
     }
 
-    // 2. PROSES SURAT TUGAS (Jadwal)
+    // 2. PROSES SURAT TUGAS
     const tasksMap = new Map<string, AssignmentTask>();
     const rawSurat = rawData['SURAT_TUGAS'];
     if (rawSurat && rawSurat.length > 1) {
       rawSurat.slice(1).forEach((row: any[]) => {
         const nip = String(row[0]);
-        const letterNum = row[1]; // Penyesuaian Index: NIP (0), No Surat (1), Basis (2), Kegiatan (3), Lokasi (4), Mulai (5), Selesai (6), Signee (7)
+        const letterNum = row[1]; // Nomor Surat Tugas
         
         if (!nip || !letterNum) return;
 
-        const description = row[3] || '-';
+        const description = row[3] || '-'; // Nama Kegiatan
         const location = row[4] || '-';
         const tglMulai = String(row[5]);
         const tglSelesai = String(row[6]);
         const signee = row[7] || '-';
+        const activityType = row[8] || ''; // Jenis Penugasan
+        const fundingType = row[9] || ''; // Biaya
 
         const start = parseDateSafely(tglMulai);
         const end = parseDateSafely(tglSelesai);
         
         const emp = employeesMap.get(nip);
         
-        // Update status keberadaan pegawai secara real-time
         if (emp && start && end) {
           const startTime = new Date(start).setHours(0,0,0,0);
           const endTime = new Date(end).setHours(23,59,59,999);
@@ -139,7 +137,8 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
             endDate: tglSelesai,
             signee: signee,
             employees: emp ? [emp] : [],
-            activityType: (row[3]?.toLowerCase().includes('daring') ? 'Daring' : 'Luring') as any,
+            activityType: activityType as any,
+            fundingType: fundingType as any,
             reportStatus: ReportStatus.PENDING,
             documentationPhotos: []
           });
@@ -147,7 +146,7 @@ export const fetchSpreadsheetData = async (): Promise<{ employees: Employee[], t
       });
     }
 
-    // 3. PROSES DATA LAPORAN (Untuk mencocokkan status tugas yang sudah lapor)
+    // 3. PROSES DATA LAPORAN
     const rawLaporan = rawData['LAPORAN_TUGAS'];
     if (rawLaporan && rawLaporan.length > 1) {
       rawLaporan.slice(1).forEach((row: any[]) => {
